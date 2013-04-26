@@ -1,0 +1,21 @@
+#define PIN_LCD0 0
+#define PIN_LCD1 1
+#define PIN_LCD2 2
+#define PIN_LCD3 3
+#define PIN_LCD4 4
+#define PIN_LCD5 5
+
+#define PIN_KEYPAD_COL0 6
+#define PIN_KEYPAD_COL1 7
+#define PIN_KEYPAD_COL2 8
+#define PIN_KEYPAD_COL3 9
+#define PIN_KEYPAD_ROW0 10
+#define PIN_KEYPAD_ROW1 11
+#define PIN_KEYPAD_ROW2 12
+#define PIN_KEYPAD_ROW3 13
+
+#define PIN_TEMP_SENS A0
+#define PIN_FLAME_SENS A1
+
+#define PIN_IGNITION A5
+#define PIN_GASVALVE A6
