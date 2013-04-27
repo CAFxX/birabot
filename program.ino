@@ -8,6 +8,26 @@
                   (for B sweeps, ending temperature)
   
   program := statement+
+  
+  example:
+    30A50#15B80#25A99#
+    
+     0 -> 50 // 30A50#
+     1 -> 50
+    ...
+    29 -> 50 
+    30 -> 52 // 15B80#
+    31 -> 54
+    ...
+    43 -> 78
+    44 -> 80
+    45 -> 99 // 25B99#
+    46 -> 99
+    ...
+    68 -> 99
+    69 -> 99
+    70 ->  0 // program end
+    71 ->  0
 */
 
 struct statement {

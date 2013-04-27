@@ -19,3 +19,5 @@
 
 #define PIN_IGNITION A5
 #define PIN_GASVALVE A6
+
+#define PIN_UNCONNECTED A4

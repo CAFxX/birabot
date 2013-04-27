@@ -19,6 +19,7 @@ void setup_pins() {
   pinMode(PIN_FLAME_SENS, INPUT);
   pinMode(PIN_IGNITION, OUTPUT);
   pinMode(PIN_GASVALVE, OUTPUT);
+  pinMode(PIN_UNCONNECTED, INPUT);
 }
 
 
