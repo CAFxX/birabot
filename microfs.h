@@ -10,10 +10,12 @@
   - 256 bytes per file
   - no directories, ACLs, file[cma]time, etc.
   - files are allocated as contiguos chunks of EEPROM, file fragments are not allowed 
-    (this implies that to allocate a file of size N bytes, a 
+    (this implies that to allocate a file of size N bytes, a chunk of size N+2 must be free)
   
   TODO:
   - use EEPROMex or other libs instead of the standard EEPROM
+  - files can't be changed in size
+  - free space defragmentation
 */
 
 class microfsfile {
@@ -192,6 +194,7 @@ class microfs {
   private:
 
   // find a random chunk of eeprom, at least size+2 bytes long
+  // FIXME: avoid selecting chunks of size+2+1 bytes (because the unallocated header won't fit in 1 byte!)
   microfsfile find_alloc(byte size) {
     size_t pos = 0, candidates = 0;
     size_t start_pos = rand() % size;
