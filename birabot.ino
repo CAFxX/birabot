@@ -6,11 +6,13 @@
 #include "microfs.h"
 
 void setup() {
+  noInterrupts();
   setup_pins();
   setup_random();
   setup_display();
   setup_keypad();
   setup_fs();
+  interrupts();
   setup_safety();
   resume();
 }
