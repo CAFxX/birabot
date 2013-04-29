@@ -186,8 +186,10 @@ class microfs {
       return microfsfile();
     microfsfile newfile(id, size);
     size_t newfile_pos = unallocated.offset;
-    unallocated.size -= newfile.stride();
-    write_header(unallocated.offset+newfile.stride(), unallocated);
+    if (size < unallocated.size) {
+      unallocated.size -= newfile.stride();
+      write_header(unallocated.offset+newfile.stride(), unallocated);
+    }
     return write_header(newfile_pos, newfile);
   }
   
@@ -218,24 +220,18 @@ class microfs {
   private:
 
   // find a random chunk of eeprom, at least size+2 bytes long
-  // FIXME: avoid selecting chunks of size+2+1 bytes (because the unallocated header won't fit in 1 byte!)
   microfsfile find_alloc(byte size) {
     size_t pos = 0, candidates = 0;
     size_t start_pos = rand() % size;
+    // try to find an free chunk after a random start_pos (with wrap around)
     while (pos < size) {
-      microfsfile f = read_header(pos);
-      if (f.is_valid() && f.id == 0 && f.size >= size && pos >= start_pos) {
+      size_t cur_pos = (start_pos + pos) % size;
+      microfsfile f = read_header(cur_pos);
+      if (f.is_valid() && f.id == 0 && (f.size == size || f.size >= size+2)) {
         return f;
       }
       pos += f.stride();
     }
-    while (pos < size) {
-      microfsfile f = read_header(pos);
-      if (f.is_valid() && f.id == 0 && f.size >= size) {
-        return f;
-      }
-      pos += f.stride();
-    }    
     return microfsfile();    
   }
   
