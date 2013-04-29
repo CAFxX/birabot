@@ -22,8 +22,11 @@ class microfsfile {
   
   friend class microfs;
   
+  // IN-EEPROM MEMBERS //
   byte id; // id of the file, id 0 is reserved for unallocated space
   byte size; // size of file (bytes)
+  
+  // IN-MEMORY MEMBERS //
   size_t offset; // offset of file header in EEPROM
 
   public:
@@ -96,10 +99,12 @@ class microfsfile {
 class microfs {
   
   size_t size;
+  bool consistent;
   
   public:
   microfs() {
     size = 1024;
+    consistent = check_disk();
   }
   
   void format() {
