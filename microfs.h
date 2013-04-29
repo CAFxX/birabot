@@ -38,6 +38,9 @@ TODO:
   - free space defragmentation
 */
 
+#ifndef MICROFS
+#define MICROFS 
+
 class microfsfile {
   
   friend class microfs;
@@ -289,4 +292,4 @@ class microfs {
   
 };
 
-
+#endif // MICROFS
