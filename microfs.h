@@ -36,6 +36,7 @@ TODO:
   - use EEPROMex or other (better) libraries instead of the standard EEPROM library
   - files can't be changed in size (extend in place, copy-and-extend)
   - free space defragmentation
+  - check after write to ensure successful writes
 */
 
 #ifndef MICROFS
