@@ -4,6 +4,7 @@
   
   features:
   - 2 byte overhead per file
+  - (optional) wear-levelling
   
   limits:
   - 255 files (files are unnamed, can be identified using a number from 1 to 255 inclusive)
@@ -12,11 +13,34 @@
   - files are allocated as contiguos chunks of EEPROM, file fragments are not allowed 
     (this implies that to allocate a file of size N bytes, a chunk of size N+2 must be free)
   
+  design:
+  Each file on disk is represented by a contiguous chunk of bytes made up of a file header immediately 
+  followed by the file data:
+  
+  +---- stride (file_length + 2) ----+
+  |                                  |
+  ILDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDILDDD...   <-- EEPROM contents
+  |||                               |
+  ||+-- file_length bytes of data --+
+  |+- byte file_length 
+  +- byte file_id 
+  
+  Files are placed one after another with no padding in between. This effectively yields an on-disk
+  linked list: to get the position of the header of the following file, we just need to add the 
+  stride to the position of the current file header.
+  
+  file_ids are required to be unique and in the range 1-255 inclusive: file_id 0 is used to mark 
+  unallocated space and can occur multiple times
+
   TODO:
-  - use EEPROMex or other libs instead of the standard EEPROM
-  - files can't be changed in size
+  - use EEPROMex or other (better) libraries instead of the standard EEPROM library
+  - files can't be changed in size (extend in place, copy-and-extend)
   - free space defragmentation
+  - check after write to ensure successful writes
 */
+
+#ifndef MICROFS
+#define MICROFS 
 
 class microfsfile {
   
@@ -103,7 +127,7 @@ class microfs {
   
   public:
   microfs() {
-    size = 1024;
+    size = E2END + 1;
     consistent = check_disk();
   }
   
@@ -167,8 +191,10 @@ class microfs {
       return microfsfile();
     microfsfile newfile(id, size);
     size_t newfile_pos = unallocated.offset;
-    unallocated.size -= newfile.stride();
-    write_header(unallocated.offset+newfile.stride(), unallocated);
+    if (size < unallocated.size) {
+      unallocated.size -= newfile.stride();
+      write_header(unallocated.offset+newfile.stride(), unallocated);
+    }
     return write_header(newfile_pos, newfile);
   }
   
@@ -199,24 +225,18 @@ class microfs {
   private:
 
   // find a random chunk of eeprom, at least size+2 bytes long
-  // FIXME: avoid selecting chunks of size+2+1 bytes (because the unallocated header won't fit in 1 byte!)
   microfsfile find_alloc(byte size) {
     size_t pos = 0, candidates = 0;
     size_t start_pos = rand() % size;
+    // try to find an free chunk after a random start_pos (with wrap around)
     while (pos < size) {
-      microfsfile f = read_header(pos);
-      if (f.is_valid() && f.id == 0 && f.size >= size && pos >= start_pos) {
+      size_t cur_pos = (start_pos + pos) % size;
+      microfsfile f = read_header(cur_pos);
+      if (f.is_valid() && f.id == 0 && (f.size == size || f.size >= size+2)) {
         return f;
       }
       pos += f.stride();
     }
-    while (pos < size) {
-      microfsfile f = read_header(pos);
-      if (f.is_valid() && f.id == 0 && f.size >= size) {
-        return f;
-      }
-      pos += f.stride();
-    }    
     return microfsfile();    
   }
   
@@ -274,4 +294,4 @@ class microfs {
   
 };
 
-
+#endif // MICROFS
