@@ -122,7 +122,7 @@ class microfs {
   
   public:
   microfs() {
-    size = 1024;
+    size = E2END + 1;
   }
   
   void format() {
