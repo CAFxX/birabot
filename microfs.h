@@ -8,10 +8,11 @@
   
   limits:
   - 255 files (files are unnamed, can be identified using a number from 1 to 255 inclusive)
-  - 256 bytes per file
+  - 0-255 bytes per file
   - no directories, ACLs, file[cma]time, etc.
   - files are allocated as contiguos chunks of EEPROM, file fragments are not allowed 
     (this implies that to allocate a file of size N bytes, a chunk of size N+2 must be free)
+  - if power is lost (or execution halted) inside a CRITICAL SECTION, the whole fs is corrupted
   
   design:
   Each file on disk is represented by a contiguous chunk of bytes made up of a file header immediately 
@@ -33,14 +34,31 @@
   unallocated space and can occur multiple times
 
   TODO:
-  - use EEPROMex or other (better) libraries instead of the standard EEPROM library
   - files can't be changed in size (extend in place, copy-and-extend)
   - free space defragmentation
   - check after write to ensure successful writes
 */
 
 #ifndef MICROFS
-#define MICROFS 
+#define MICROFS
+
+#include <avr/eeprom.h>
+
+static byte eeprom_read(size_t pos) {
+  if (pos < 0 || pos > E2END)
+    return 0;
+  return eeprom_read_byte((uint8_t*)pos);
+}
+
+static bool eeprom_update(size_t pos, byte val) {
+  if (pos < 0 || pos > E2END)
+    return false;
+  // the avr/eeprom.h for arduino appears to lack eeprom_update_byte
+  if (eeprom_read(pos) == val)
+    return true;
+  eeprom_write_byte((uint8_t*)pos, val);
+  return eeprom_read(pos) == val;
+}
 
 class microfsfile {
   
@@ -53,7 +71,6 @@ class microfsfile {
   // IN-MEMORY MEMBERS //
   size_t offset; // offset of file header in EEPROM
 
-  public:
   // construct the "invalid" file
   microfsfile() {
     id = 0;
@@ -75,6 +92,16 @@ class microfsfile {
     offset = eeprom_offset;
   }
   
+  size_t stride() {
+    return ((size_t)2) + ((size_t)size);
+  }
+  
+  // true if this is an unallocated chunk that can be merged with one of its neighbors
+  bool mergeable() {
+    return is_valid() && (id == 0) && (size < 255);
+  }  
+  
+  public:
   bool is_valid() {
     return offset >= 0; // FIXME  
   }
@@ -86,20 +113,15 @@ class microfsfile {
   bool write_byte(byte pos, byte value) {
     if (!is_valid())
       return false;
-    size_t off = offset + 2 + pos;
-    if (off < 0 || off >= size)
-      return false;
-    EEPROM.write(off, value);
-    return true;
+    size_t off = offset + ((size_t)2) + ((size_t)pos);
+    return eeprom_update(off, value);
   }
   
   byte read_byte(byte pos) {
     if (!is_valid())
       return 0;
     size_t off = offset + 2 + pos;
-    if (off < 0 || off >= size)
-      return 0;
-    return EEPROM.read(off);
+    return eeprom_read(off);
   }
   
   byte read_bytes(byte pos, byte* buf, byte len) {
@@ -112,10 +134,6 @@ class microfsfile {
       buf[i] = read_byte(pos+i);
     }
     return len;
-  }
-  
-  size_t stride() {
-    return 2 + size;
   }
   
 };
@@ -132,7 +150,7 @@ class microfs {
   }
   
   void format() {
-    microfsfile unallocated(0, 256);
+    microfsfile unallocated(0, 255);
     size_t pos = 0;
     while (pos < size) {
       write_header(pos, unallocated);
@@ -172,7 +190,7 @@ class microfs {
   
   microfsfile open(byte file_id) {
     size_t pos = 0;
-    while (pos+2 < size) {
+    while (pos < size) {
       microfsfile f = read_header(pos);
       if (f.is_valid() && f.id == file_id) {
         return f;
@@ -182,6 +200,7 @@ class microfs {
     return microfsfile();
   }
   
+  // allocate and create a new file on disk of size <size>
   microfsfile create(byte size) {
     microfsfile unallocated = find_alloc(size);
     if (!unallocated.is_valid())
@@ -191,33 +210,48 @@ class microfs {
       return microfsfile();
     microfsfile newfile(id, size);
     size_t newfile_pos = unallocated.offset;
-    if (size < unallocated.size) {
+    // find_alloc will return either a chunk of size == size or size >= size + 2
+    // in the second case, we write a new unallocated header at the end of the newly allocated file
+    if (unallocated.size > size) {
       unallocated.size -= newfile.stride();
       write_header(unallocated.offset+newfile.stride(), unallocated);
     }
     return write_header(newfile_pos, newfile);
   }
   
+  // remove file <file_id> from disk
   bool remove(byte file_id) {
+    // file_id == 0 is unallocated space, can't be removed...
     if (file_id == 0)
       return false;
+    // find the file to be deleted and its immediate neighbors
     microfsfile prev, cur, next;
     find_contiguous_files(file_id, &prev, &cur, &next);
     if (!cur.is_valid())
       return false;
-    if (prev.is_valid() && prev.id == 0 && next.is_valid() && next.id == 0) {
-      prev.size = prev.size + cur.stride() + next.stride();
-      write_header(prev.offset, prev);
-    } else if (prev.is_valid() && prev.id == 0) {
-      prev.size = prev.size + cur.stride();
-      write_header(prev.offset, prev);
-    } else if (next.is_valid() && next.id == 0) {
-      cur.size = cur.size + next.stride();
-      cur.id = 0;
-      write_header(cur.offset, cur);
+    // check if we can merge the file with one or more of its neighbors
+    size_t new_size, new_pos;
+    if (prev.mergeable() && next.mergeable()) {
+      new_size = ((size_t)prev.size) + cur.stride() + next.stride();
+      new_pos = prev.offset;
+    } else if (prev.mergeable()) {
+      new_size = ((size_t)prev.size) + cur.stride();
+      new_pos = prev.offset;
+    } else if (next.mergeable()) {
+      new_size = ((size_t)cur.size) + next.stride();
+      new_pos = cur.offset;
     } else {
-      cur.id = 0;
-      write_header(cur.offset, cur);
+      new_size = ((size_t)cur.size);
+      new_pos = cur.offset;
+    }
+    // actually write to disk the changes
+    // FIXME: proceed backwards
+    /* CRITICAL SECTION */ {
+      while (new_size > 255) {
+        new_pos += write_header(new_pos, microfsfile(0, 255)).stride();
+        new_size -= 255;
+      }
+      write_header(new_pos, microfsfile(0, new_size));
     }
     return true;
   }
@@ -228,7 +262,7 @@ class microfs {
   microfsfile find_alloc(byte size) {
     size_t pos = 0, candidates = 0;
     size_t start_pos = rand() % size;
-    // try to find an free chunk after a random start_pos (with wrap around)
+    // try to find an free chunk after a random start_pos (wrapping around, if needed)
     while (pos < size) {
       size_t cur_pos = (start_pos + pos) % size;
       microfsfile f = read_header(cur_pos);
@@ -275,20 +309,22 @@ class microfs {
     }    
   }
   
-  void write_raw(size_t pos, void *src, size_t len) {
-    byte *_src = (byte*)src;
-    for (size_t i=0; i<len; i++)
-      EEPROM.write(pos+i, _src[i]);
-  }
-  
+  // read and interpret the two bytes at pos+0 and pos+1 in EEPROM as a file header
+  // note: no check is performed about pos pointing to an actual file header!
   microfsfile read_header(size_t pos) {
-    return pos+2 < size ? microfsfile(EEPROM.read(pos+0), EEPROM.read(pos+1), pos) : microfsfile();
+    if (pos+2 > size)
+      return microfsfile();
+    byte file_id = eeprom_read(pos+0);  
+    byte file_size = eeprom_read(pos+1);  
+    return microfsfile(file_id, file_size, pos);
   }
   
   microfsfile write_header(size_t pos, microfsfile f) {
     f.offset = pos;
-    EEPROM.write(pos+1, f.size);
-    EEPROM.write(pos+0, f.id);
+    /* CRITICAL SECTION */ {
+      eeprom_update(pos+1, f.size);
+      eeprom_update(pos+0, f.id);
+    }
     return f;
   }
   
