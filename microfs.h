@@ -3,7 +3,8 @@
   A low-footprint wear-leveling file system for Arduino/AVR microcontrollers
   
   features:
-  - 2 byte overhead per file
+  - 2 byte on-disk overhead per file
+  - 4 byte in-memory overhead per open file
   - (optional) wear-levelling
   
   limits:
@@ -140,19 +141,17 @@ class microfsfile {
 
 class microfs {
   
-  size_t size;
+  const size_t size;
   bool consistent;
   
   public:
-  microfs() {
-    size = E2END + 1;
-    consistent = check_disk();
+  microfs() : size(E2END+1) {
   }
   
   void format() {
-    microfsfile unallocated(0, 255);
     size_t pos = 0;
     while (pos < size) {
+      microfsfile unallocated(0, max(0, min(255, size-pos-2)));
       write_header(pos, unallocated);
       pos += unallocated.stride();
     }
@@ -266,7 +265,8 @@ class microfs {
     while (pos < size) {
       size_t cur_pos = (start_pos + pos) % size;
       microfsfile f = read_header(cur_pos);
-      if (f.is_valid() && f.id == 0 && (f.size == size || f.size >= size+2)) {
+      size_t size_plus_2 = ((size_t)size)+((size_t)2);
+      if (f.is_valid() && f.id == 0 && (f.size == size || f.size >= size_plus_2)) {
         return f;
       }
       pos += f.stride();
@@ -312,7 +312,7 @@ class microfs {
   // read and interpret the two bytes at pos+0 and pos+1 in EEPROM as a file header
   // note: no check is performed about pos pointing to an actual file header!
   microfsfile read_header(size_t pos) {
-    if (pos+2 > size)
+    if (pos < 0 || pos+2 > size)
       return microfsfile();
     byte file_id = eeprom_read(pos+0);  
     byte file_size = eeprom_read(pos+1);  
@@ -320,14 +320,18 @@ class microfs {
   }
   
   microfsfile write_header(size_t pos, microfsfile f) {
-    f.offset = pos;
+    if (pos < 0 || pos+2 > size)
+      return f;
     /* CRITICAL SECTION */ {
       eeprom_update(pos+1, f.size);
       eeprom_update(pos+0, f.id);
     }
+    f.offset = pos;
     return f;
   }
   
 };
+
+microfs fs;
 
 #endif // MICROFS

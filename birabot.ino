@@ -17,12 +17,22 @@ void setup() {
   resume();
 }
 
+size_t seconds = 0;
+
 void resume() {
   microfsfile resumefile = open_file(1);
+  if (!resumefile.is_valid())
+    return;
   byte buf[3] = {0};
   resumefile.read_bytes(0, buf, sizeof(buf));
-  open_file(buf[0]);
-  
+  microfsfile programfile = open_file(buf[0]);
+  if (!programfile.is_valid()) {
+    fs.remove(1);
+    return;
+  }
+  seconds = buf[1];
+  seconds <<= 8;
+  seconds |= buf[2];
 }
 
 void loop() {

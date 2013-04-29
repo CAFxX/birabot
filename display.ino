@@ -35,7 +35,6 @@ void clear_display() {
    +----------------+ */
 void screen_status() {
   int T1 = 37, s = 725;
-  char P[] = "pippo";
   program *prg;
 
   clear_display();
