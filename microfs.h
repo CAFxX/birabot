@@ -37,7 +37,7 @@
   TODO:
   - files can't be changed in size (extend in place, copy-and-extend)
   - free space defragmentation
-  - check after write to ensure successful writes
+  - 
 */
 
 #ifndef MICROFS
@@ -51,14 +51,17 @@ static byte eeprom_read(size_t pos) {
   return eeprom_read_byte((uint8_t*)pos);
 }
 
-static bool eeprom_update(size_t pos, byte val) {
+static bool eeprom_update(size_t pos, byte val, bool check_after_write = true) {
   if (pos < 0 || pos > E2END)
     return false;
-  // the avr/eeprom.h for arduino appears to lack eeprom_update_byte
+  /* the avr/eeprom.h for arduino appears to lack eeprom_update_byte
+     since reading from EEPROM appears to be way faster than writing 
+     always check if by chance the current position already holds the
+     correct value: if this is the case, simply return success immediately */
   if (eeprom_read(pos) == val)
     return true;
   eeprom_write_byte((uint8_t*)pos, val);
-  return eeprom_read(pos) == val;
+  return check_after_write ? eeprom_read(pos) == val : true;
 }
 
 class microfsfile {
@@ -93,6 +96,7 @@ class microfsfile {
     offset = eeprom_offset;
   }
   
+  // distance from the current header to the next one
   size_t stride() {
     return ((size_t)2) + ((size_t)size);
   }
@@ -103,14 +107,18 @@ class microfsfile {
   }  
   
   public:
+  // true if the file is on disk
   bool is_valid() {
     return offset >= 0; // FIXME  
   }
   
+  // return the size of the file
   byte get_size() {
     return size;
   }
   
+  // write byte <value> to position <pos> in the current file
+  // if the file is not valid or if <pos> is out of bounds, return false
   bool write_byte(byte pos, byte value) {
     if (!is_valid())
       return false;
@@ -118,11 +126,25 @@ class microfsfile {
     return eeprom_update(off, value);
   }
   
+  // read a byte from position <pos> in the current file
+  // if the file is not valid or if <pos> is out of bounds, return 0
   byte read_byte(byte pos) {
     if (!is_valid())
       return 0;
     size_t off = offset + 2 + pos;
     return eeprom_read(off);
+  }
+  
+  byte write_bytes(byte pos, byte* buf, byte len) {
+    if (!is_valid())
+      return 0;
+    if (pos >= size)
+      return 0;
+    len = min(len, size-pos);
+    for (byte i=0; i<len; i++) {
+      write_byte(pos+i, buf[i]);
+    }
+    return len;
   }
   
   byte read_bytes(byte pos, byte* buf, byte len) {
@@ -157,6 +179,9 @@ class microfs {
     }
   }
   
+  // true if the disk _appears_ to be in a consistent state
+  // note: this is a very poor approximation of a real disk check... it
+  // may very well return true if the data is completely screwed
   bool check_disk() {
     size_t pos = 0;
     byte mask[256/8] = {0};
@@ -175,6 +200,8 @@ class microfs {
     return true;
   }
   
+  // amount of space currently used by file data (file headers are not counted: this means 
+  // that size-used() >= available)
   size_t used() {
     size_t pos = 0, used = 0;
     while (pos < size) {
@@ -187,6 +214,7 @@ class microfs {
     return used;
   }
   
+  // open an existing file with id <file_id>
   microfsfile open(byte file_id) {
     size_t pos = 0;
     while (pos < size) {
@@ -211,6 +239,7 @@ class microfs {
     size_t newfile_pos = unallocated.offset;
     // find_alloc will return either a chunk of size == size or size >= size + 2
     // in the second case, we write a new unallocated header at the end of the newly allocated file
+    // note: no critical section here!
     if (unallocated.size > size) {
       unallocated.size -= newfile.stride();
       write_header(unallocated.offset+newfile.stride(), unallocated);
@@ -240,7 +269,7 @@ class microfs {
       new_size = ((size_t)cur.size) + next.stride();
       new_pos = cur.offset;
     } else {
-      new_size = ((size_t)cur.size);
+      new_size = cur.size;
       new_pos = cur.offset;
     }
     // actually write to disk the changes
@@ -255,9 +284,38 @@ class microfs {
     return true;
   }
   
+  microfsfile write_file(byte len, byte* data = NULL, byte file_id = 0) {
+    microfsfile f;
+    if (file_id == 0) {
+      f = create(len);
+    } else {
+      f = open(file_id);
+    }
+    if (!f.is_valid())
+      return microfsfile();
+      
+    if (data == NULL) {
+      if (file_id == 0) {
+        return create(len);
+      } else {
+        microfsfile f = open(file_id);
+      }
+    } else {
+      if (file_id != 0) {
+        remove(file_id);
+      }
+      microfsfile f = create(len);
+      f.write_bytes(0, data, len);
+    }
+    // file_id != 0 && data == NULL -> truncate/extend
+    // file_id == 0 && data == NULL -> allocate uninitialized
+    // data != NULL                 -> overwrite
+  }
+  
   private:
 
-  // find a random chunk of eeprom, at least size+2 bytes long
+  // find a random chunk of eeprom that can be used to store a file of length <size>
+  // this means either a chunk of size = <size>+2 or a chunk of site >= <size>+2+2
   microfsfile find_alloc(byte size) {
     size_t pos = 0, candidates = 0;
     size_t start_pos = rand() % size;
