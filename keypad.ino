@@ -13,6 +13,7 @@ byte colPins[rows] = { PIN_KEYPAD_COL0, PIN_KEYPAD_COL1, PIN_KEYPAD_COL2, PIN_KE
 Keypad keypad( makeKeymap(keys), rowPins, colPins, rows, cols );
 
 void keypadEvent(char key) {
+  uxmgr::get().on_key(key);
 }
 
 void setup_keypad() {

@@ -4,6 +4,7 @@
 #include <FlexiTimer2.h>
 #include <Keypad.h>
 #include "microfs.h"
+#include "uxmgr.h"
 
 void setup() {
   noInterrupts();
@@ -38,6 +39,6 @@ void resume() {
 }
 
 void loop() {
-  screen_status();
+  uxmgr::get().draw();
 }
 
