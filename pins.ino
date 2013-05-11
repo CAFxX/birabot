@@ -4,6 +4,7 @@ void setup_pins() {
   // set the ADC reference to 1.1V
   analogReference(INTERNAL);
   // set the mode for all pins
+  // keypad pins are configured internally by the Keypad library
   // LCD pins
   pinMode(PIN_LCD0, OUTPUT);
   pinMode(PIN_LCD1, OUTPUT);
@@ -11,15 +12,6 @@ void setup_pins() {
   pinMode(PIN_LCD3, OUTPUT);
   pinMode(PIN_LCD4, OUTPUT);
   pinMode(PIN_LCD5, OUTPUT);
-  // keypad pins
-  pinMode(PIN_KEYPAD_COL0, INPUT);
-  pinMode(PIN_KEYPAD_COL1, INPUT);
-  pinMode(PIN_KEYPAD_COL2, INPUT);
-  pinMode(PIN_KEYPAD_COL3, INPUT);
-  pinMode(PIN_KEYPAD_ROW0, INPUT);
-  pinMode(PIN_KEYPAD_ROW1, INPUT);
-  pinMode(PIN_KEYPAD_ROW2, INPUT);
-  pinMode(PIN_KEYPAD_ROW3, INPUT);
   // temperature sensor pin (digital)
   pinMode(PIN_TEMP_SENS, INPUT);
   // flame sensor (thermocouple) pin (analog)
