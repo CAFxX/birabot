@@ -1,6 +1,6 @@
 #include "microfs.h"
 
-void setup_fs() {
+static void setup_fs() {
 }
 
 microfsfile open_file(byte id) {

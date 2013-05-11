@@ -1,6 +1,6 @@
 #include "pins.h"
 
-void setup_pins() {
+static void setup_pins() {
   // set the ADC reference to 1.1V
   analogReference(INTERNAL);
   // set the mode for all pins

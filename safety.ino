@@ -91,7 +91,7 @@ boolean flame_on() {
   return flame_level > flame_level_threshold;
 }
 
-void setup_safety() {
+static void setup_safety() {
   // the safety_control routine is called every 50ms
   FlexiTimer2::set(safety_control_interval, safety_control);
   FlexiTimer2::start();

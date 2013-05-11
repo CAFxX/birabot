@@ -13,6 +13,7 @@ void setup() {
   setup_display();
   setup_keypad();
   setup_fs();
+  setup_temperature();
   interrupts();
   setup_safety();
   resume();
@@ -20,7 +21,7 @@ void setup() {
 
 size_t seconds = 0;
 
-void resume() {
+static void resume() {
   microfsfile resumefile = open_file(1);
   if (!resumefile.is_valid() || resumefile.get_size() != 3) {
     fs.remove(1);
@@ -39,6 +40,6 @@ void resume() {
 }
 
 void loop() {
-  uxmgr::get().draw();
+  uxmgr::draw();
 }
 
