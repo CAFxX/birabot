@@ -35,86 +35,7 @@ class manual_control;
 class reset_confirm;
 class splash_screen;
 
-byte logo00[] = {
-  B00001,
-  B00010,
-  B01110,
-  B10001,
-  B10000,
-  B01111,
-  B01101,
-  B01101
-};
-byte logo01[] = {
-  B11000,
-  B01110,
-  B10001,
-  B00001,
-  B00001,
-  B11110,
-  B10111,
-  B10111
-};
-byte logo02[] = {
-  B00000,
-  B00000,
-  B00000,
-  B00000,
-  B00000,
-  B00000,
-  B10000,
-  B11000
-};
-byte logo03[] = {
-  B11111,
-  B10000,
-  B00111,
-  B00101,
-  B00000,
-  B00111,
-  B00101,
-  B11111
-};
-byte logo10[] = {
-  B01101,
-  B01101,
-  B01101,
-  B01101,
-  B01101,
-  B01101,
-  B01111,
-  B00111
-};
-byte logo11[] = {
-  B10110,
-  B10110,
-  B10110,
-  B10110,
-  B10110,
-  B10111,
-  B11111,
-  B11100
-};
-byte logo12[] = {
-  B11000,
-  B11000,
-  B11000,
-  B11000,
-  B11000,
-  B11000,
-  B10000,
-  B00000
-};
-byte logo13[] = {
-  B00100,
-  B00111,
-  B00000,
-  B00111,
-  B00000,
-  B00111,
-  B00101,
-  B11111
-};
+#include "custom_chars.h"
 
 void clear_display() {
   lcd.clear();
@@ -251,7 +172,7 @@ class program_menu : public ux {
   void on_key(char key) {
     last_key = key;
     switch (key) {
-      case 'A': uxmgr::show<program_setup>(this); break;
+      case 'A': uxmgr::show<program_list>(this); break;
       case 'B': uxmgr::show<program_list>(this); break;
       case 'C': uxmgr::show<program_list>(this); break;
       case 'D': uxmgr::show<program_list>(this); break;
@@ -260,7 +181,8 @@ class program_menu : public ux {
   }
   void on_back(int retVal) {
     switch (last_key) {
-      case 'B': uxmgr::show<program_setup>(this); break;
+      case 'A': uxmgr::show<program_setup>(this, retVal); break;
+      case 'B': uxmgr::show<program_setup>(this, retVal); break;
       case 'C': break;
       case 'D': fs.remove(retVal); break;
     }

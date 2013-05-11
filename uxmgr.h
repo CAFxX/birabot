@@ -7,7 +7,8 @@ class ux {
   ux() : back(NULL) {}
   public:
   virtual void draw() = 0;
-  virtual void on_key(char key) = 0;
+  virtual void on_init(int param) {};
+  virtual void on_key(char key) {};
   virtual void on_back(int retVal) {};
 };
 
@@ -30,12 +31,24 @@ class uxmgr {
   }
   
   template <class T>
+  void _show(int param) {
+    _show<T>(NULL, param);
+  }
+
+  template <class T>
   void _show(ux *back = NULL) {
     if (curr != NULL && back == NULL)
       delete curr;
     curr = new T();
     curr->back = back;
   }
+  
+  template <class T>
+  void _show(ux *back, int param) {
+    _show<T>(back);
+    curr->on_init(param);
+  }
+
   
   void _back(int retVal) {
     _back();
@@ -62,6 +75,16 @@ class uxmgr {
   template <class T>
   static void show(ux *back = NULL) {
     get()._show<T>(back);
+  }
+
+  template <class T>
+  static void show(int param) {
+    get()._show<T>(param);
+  }
+
+  template <class T>
+  static void show(ux *back, int param) {
+    get()._show<T>(back, param);
   }
 
   static void back() {
