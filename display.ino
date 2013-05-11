@@ -38,10 +38,18 @@ void clear_display() {
 void setup_display() {
   lcd.begin(16, 2);
   clear_display();
-  printAt(0, 0, "BIRABOT");
-  printAt(0, 1, __DATE__ " " __TIME__);
+  uxmgr::show<splash_screen>();
   uxmgr::show<main_menu>();
 }
+
+class splash_screen : public ux {
+  void draw() {
+    printScreen(
+      "XXXX BIRABOT  ",
+      "XXXX " __DATE__
+    );
+  }
+};
 
 class main_menu : public ux {
   void draw() {
@@ -189,14 +197,30 @@ class program_setup : public ux {
   }
 };
 
+
+/* 
+   +----------------+
+   |DELETE ALL DATA?|
+   |*-Delete Abort-#|
+   +----------------+ 
+   Deep reset confirmation
+*/
 class reset_confirm : public ux {
   void draw() {
+    printScreen(
+      "DELETE ALL DATA?",
+      "*-Delete Abort-#"
+    );
   }
   void on_key(char key) {
+    switch (key) {
+      case '*': uxmgr::show<main_menu>(); break;
+      case '#': do_reset(); uxmgr::show<main_menu>(); break;
+    }
   }
   void do_reset() {
     fs.format();
-    
+    reset();
   }
 };
 
