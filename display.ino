@@ -355,6 +355,8 @@ class program_setup : public ux {
   byte file_id;
   byte field;
   byte row;
+  byte rows;
+  program *prg;
   
   ux_input_numeric<2, 1> type_mode;
   ux_input_numeric<256, 100> type_duration;
@@ -363,14 +365,15 @@ class program_setup : public ux {
   public:
   program_setup() {
     row = 0;
+    rows = 0;
     field = 0;
     file_id = 0;
+    prg = NULL;
   }
   void on_init(int param) {
     file_id = param;
   }
   void draw() {
-    program *prg;
     byte file_id, cur_step, num_steps, step_duration, step_temperature, step_mode;
     int program_duration;
     
@@ -380,7 +383,7 @@ class program_setup : public ux {
     
     // second line
     printfAt(0, 1, "%02d/%02d   %c %03d %02d", 
-      cur_step, num_steps, step_mode, step_duration, step_temperature);
+      row, rows+1, type_mode() ? 'C' : 'L', type_duration(), type_temp());
     
     switch (field) {
       case 0: lcd.setCursor(7, 1); break;
@@ -392,23 +395,38 @@ class program_setup : public ux {
   void on_key(char key) {
     switch (key) {
       case 'A':
-        row--;
+        row = ( row - 1 + rows+1 ) % ( rows+1 );
+        type_mode = get_step_type(prg, row);
+        type_duration = get_step_duration(prg, row);
+        type_temp = get_step_temperature(prg, row); 
         break;
       case 'B':
-        field--;
+        field = ( field - 1 + 3 ) % 3;
         break;
       case 'C':
-        field++;
+        field = ( field + 1 + 3 ) % 3;
         break;
       case 'D':
-        row++;
+        row = ( row + 1 + rows+1 ) % ( rows+1 );
+        type_mode = get_step_type(prg, row);
+        type_duration = get_step_duration(prg, row);
+        type_temp = get_step_temperature(prg, row); 
         break;
       case '0': case '1': case '2': case '3': case '4': 
       case '5': case '6': case '7': case '8': case '9': 
         switch (field) {
-          case 0: type_mode.on_key(key); break;
-          case 1: type_duration.on_key(key); break;
-          case 2: type_temp.on_key(key); break;
+          case 0: 
+            type_mode.on_key(key); 
+            set_step_type(prg, row, type_mode()); 
+            break;
+          case 1: 
+            type_duration.on_key(key); 
+            set_step_duration(prg, row, type_duration()); 
+            break;
+          case 2: 
+            type_temp.on_key(key); 
+            set_step_temperature(prg, row, type_temp()); 
+            break;
         }
         break;
       case '*': next<program_save>();

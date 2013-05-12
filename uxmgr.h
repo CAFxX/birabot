@@ -43,6 +43,9 @@ class ux_input_numeric {
   operator unsigned() {
     return value;
   }
+  unsigned operator()() {
+    return value;
+  }
 };
 
 class uxmgr {

@@ -63,5 +63,31 @@ byte temperature_at(struct program *p, int time) {
   return 0;
 }
 
+static struct statement get_step(struct program *p, int n) {
+  return statement();
+}
 
+static byte get_step_duration(struct program *p, int n) {
+  return get_step(p, n).duration;
+}
+
+static byte get_step_temperature(struct program *p, int n) {
+  return get_step(p, n).temperature;
+}
+
+static byte get_step_type(struct program *p, int n) {
+  return get_step(p, n).constant;
+}
+
+static byte set_step_duration(struct program *p, int n, byte duration) {
+  return get_step(p, n).duration = duration;
+}
+
+static byte set_step_temperature(struct program *p, int n, byte temperature) {
+  return get_step(p, n).temperature = temperature;
+}
+
+static byte set_step_type(struct program *p, int n, boolean constant) {
+  return get_step(p, n).constant = constant;
+}
 
