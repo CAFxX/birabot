@@ -13,6 +13,19 @@ const char keys[rows][cols] = {
   {'#','0','*','D'}
 };
 
+const char alphakeys[10][7] = {
+  {' ', '-', '0'},
+  {'A', 'B', '1'},
+  {'C', 'D', '2'},
+  {'E', 'F', '3'},
+  {'G', 'H', '4'},
+  {'I', 'J', 'K', '5'},
+  {'L', 'M', 'N', '6'},
+  {'O', 'P', 'Q', '7'},
+  {'R', 'S', 'T', '8'},
+  {'U', 'V', 'W', 'X', 'Y', 'Z', '9'}
+};
+
 Keypad keypad( makeKeymap(keys), rowPins, colPins, rows, cols );
 
 void keypadEvent(char key) {

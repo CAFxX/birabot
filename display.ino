@@ -30,10 +30,12 @@ class program_menu;
 class program_select;
 class program_progress;
 class program_setup;
+class program_save;
 class program_list;
 class manual_control;
 class reset_confirm;
 class splash_screen;
+class microfs_tool;
 
 #include "custom_chars.h"
 
@@ -46,20 +48,26 @@ void clear_display() {
 
 void setup_display() {
   lcd.begin(16, 2);
-  lcd.createChar(0, logo00);  
-  lcd.createChar(1, logo01);  
-  lcd.createChar(2, logo02);  
-  lcd.createChar(3, logo03);  
-  lcd.createChar(4, logo10);  
-  lcd.createChar(5, logo11);  
-  lcd.createChar(6, logo12);  
-  lcd.createChar(7, logo13);  
+  clear_display();
   uxmgr::show<splash_screen>();
 }
 
 class splash_screen : public ux {
+  public:
+  splash_screen() {
+    lcd.createChar(0, logo00);  
+    lcd.createChar(1, logo01);  
+    lcd.createChar(2, logo02);  
+    lcd.createChar(3, logo03);  
+    lcd.createChar(4, logo10);  
+    lcd.createChar(5, logo11);  
+    lcd.createChar(6, logo12);  
+    lcd.createChar(7, logo13);  
+  }
   void draw() {
-    clear_display();
+    printAt(5, 0, "BIRABOT");
+    printAt(5, 1, __DATE__);
+    // draw the logo
     writeAt(0, 0, 0);
     writeAt(1, 0, 1);
     writeAt(2, 0, 2);
@@ -68,8 +76,6 @@ class splash_screen : public ux {
     writeAt(1, 1, 5);
     writeAt(2, 1, 6);
     writeAt(3, 1, 7);
-    printAt(5, 0, "BIRABOT");
-    printAt(5, 1, __DATE__);
   }
   void on_key(char) {
     show<main_menu>();
@@ -80,7 +86,7 @@ class main_menu : public ux {
   void draw() {
     printScreen(
       "A-Manual   Run-B",
-      "C-Prog   Reset-D"
+      "C-Prog   Tools-D"
     );
   }
   void on_key(char key) {
@@ -88,7 +94,7 @@ class main_menu : public ux {
       case 'A': next<manual_control>(); break;
       case 'B': next<program_progress>(); break;
       case 'C': next<program_menu>(); break;
-      case 'D': show<reset_confirm>(); break;
+      case 'D': next<microfs_tool>(); break;
     }
   }  
 };
@@ -219,23 +225,31 @@ class program_menu : public ux {
 
 /* 
    +----------------+
-   |00°>00° I+ G+ F+|
+   |00°>00°  a i g f|
    |pppppppp 000+000|
    +----------------+ 
    Progress screen shown during program execution
 */
 class program_progress : public ux {
-  
+  public:
+  program_progress() {
+    lcd.createChar(0, sym_ignition_off);  
+    lcd.createChar(1, sym_ignition_on);  
+    lcd.createChar(2, sym_gasvalve_off);  
+    lcd.createChar(3, sym_gasvalve_on);  
+    lcd.createChar(4, sym_flame_off);  
+    lcd.createChar(5, sym_flame_on);  
+  }
   void draw() {
     int s = 725;
     program *prg;
   
     // first line
-    printfAt(0, 0, "%02d°\x7e%02d° I%c G%c F%c", 
+    printfAt(0, 0, "%02d°\x7e%02d°    %c %c %c", 
       get_temperature(), temperature_at(prg, s/60), 
-      ignition_on() ? '+' : '-', 
-      gasvalve_on() ? '+' : '-', 
-      flame_on() ? '+' : '-');
+      ignition_on() ? 1 : 0, 
+      gasvalve_on() ? 3 : 2, 
+      flame_on() ? 5 : 4);
     
     // second line
     printfAt(0, 1, "%8s %03d+03d", 
@@ -252,7 +266,7 @@ class program_progress : public ux {
 
 /* 
    +----------------+
-   |00°>00° I+ G+ F+|
+   |00°>00°  a i g f|
    |*-Stop  Temp-0-9|
    +----------------+ 
    Manual control screen
@@ -267,15 +281,21 @@ class manual_control : public ux {
   manual_control() {
     temp_set = 0;
     temp_valid = false;
+    lcd.createChar(0, sym_ignition_off);  
+    lcd.createChar(1, sym_ignition_on);  
+    lcd.createChar(2, sym_gasvalve_off);  
+    lcd.createChar(3, sym_gasvalve_on);  
+    lcd.createChar(4, sym_flame_off);  
+    lcd.createChar(5, sym_flame_on);  
   }
   
   void draw() {
     // first line
-    printfAt(0, 0, "%02d°\x7E%02d° I%c G%c F%c", 
+    printfAt(0, 0, "%02d°\x7e%02d°    %c %c %c", 
       get_temperature(), temp_set, 
-      ignition_on() ? '+' : '-', 
-      gasvalve_on() ? '+' : '-', 
-      flame_on() ? '+' : '-');
+      ignition_on() ? 1 : 0, 
+      gasvalve_on() ? 3 : 2, 
+      flame_on() ? 5 : 4);
     
     if (temp_valid) {
       printAt(0, 1, "*-Stop  Temp-0-9");
@@ -319,7 +339,7 @@ class manual_control : public ux {
 /*
    +----------------+
    |PPP pppppppp LLL|
-   |SS/ss  M DDD TTT|
+   |SS/ss   M DDD TT|
    +----------------+ 
    Program input screen
    PPP program file id
@@ -331,8 +351,24 @@ class manual_control : public ux {
    DDD step duration
    TTT step temperature
 */
-
 class program_setup : public ux {
+  byte file_id;
+  byte field;
+  byte row;
+  
+  ux_input_numeric<2, 1> type_mode;
+  ux_input_numeric<256, 100> type_duration;
+  ux_input_numeric<100, 100> type_temp;
+  
+  public:
+  program_setup() {
+    row = 0;
+    field = 0;
+    file_id = 0;
+  }
+  void on_init(int param) {
+    file_id = param;
+  }
   void draw() {
     program *prg;
     byte file_id, cur_step, num_steps, step_duration, step_temperature, step_mode;
@@ -343,13 +379,63 @@ class program_setup : public ux {
       file_id, program_name(prg), program_duration);
     
     // second line
-    printfAt(0, 1, "%02d/%02d  %c %03d %03d", 
+    printfAt(0, 1, "%02d/%02d   %c %03d %02d", 
       cur_step, num_steps, step_mode, step_duration, step_temperature);
+    
+    switch (field) {
+      case 0: lcd.setCursor(7, 1); break;
+      case 1: lcd.setCursor(11, 1); break;
+      case 2: lcd.setCursor(15, 1); break;
+    }
+    lcd.cursor();
   }
   void on_key(char key) {
+    switch (key) {
+      case 'A':
+        row--;
+        break;
+      case 'B':
+        field--;
+        break;
+      case 'C':
+        field++;
+        break;
+      case 'D':
+        row++;
+        break;
+      case '0': case '1': case '2': case '3': case '4': 
+      case '5': case '6': case '7': case '8': case '9': 
+        switch (field) {
+          case 0: type_mode.on_key(key); break;
+          case 1: type_duration.on_key(key); break;
+          case 2: type_temp.on_key(key); break;
+        }
+        break;
+      case '*': next<program_save>();
+    }
+  }
+  void on_back(int retVal) {
+    if (retVal) {
+      // TODO: save changes
+    }
+    back();
   }
 };
 
+class program_save : public ux {
+  void draw() {
+    printScreen(
+      "  Save changes? ",
+      "*-Discard Save-#"
+    );    
+  }
+  void on_key(char key) {
+    switch (key) {
+      case '*': back(0); break;
+      case '#': back(1); break;
+    }
+  }  
+};
 
 /* 
    +----------------+
@@ -362,7 +448,7 @@ class reset_confirm : public ux {
   void draw() {
     printScreen(
       "DELETE ALL DATA?",
-      "*-Delete Abort-#"
+      "*-Abort Delete-#"
     );
   }
   void on_key(char key) {
@@ -386,6 +472,7 @@ class microfs_tool : public ux {
   size_t total;
   byte files;
   byte max_free_chunk;
+  public:
   microfs_tool() {
     row = 0;
     check = fs.check_disk();
@@ -397,19 +484,24 @@ class microfs_tool : public ux {
   }
   void draw() {
     switch (row) {          
-      case 0: printfAt(0, 0, "Check %10s", check ? "OK" : "ERROR"); break;
-      case 1: printfAt(0, 0, "Used %11d", used); break;
-      case 2: printfAt(0, 0, "Free %11d", free); break;
-      case 3: printfAt(0, 0, "Total %10d", total); break;
-      case 4: printfAt(0, 0, "Files %10d", files); break;
+      case 0: printfAt(0, 0, "Check     %6s", check ? "OK" : "ERROR"); break;
+      case 1: printfAt(0, 0, "Used      %6d", used); break;
+      case 2: printfAt(0, 0, "Free      %6d", free); break;
+      case 3: printfAt(0, 0, "Total     %6d", total); break;
+      case 4: printfAt(0, 0, "Files     %6d", files); break;
       case 5: printfAt(0, 0, "Max chunk %6d", max_free_chunk); break;
     }
-    printAt(0, 1, "*-Back          ");
+    if (row == 0) {
+      printAt(0, 1, "*-Back  Format-#");
+    } else {
+      printAt(0, 1, "*-Back          ");
+    }
   }
   void on_key(char key) {
     switch (key) {
       case 'A': row = (row-1) % 6; break;
       case 'D': row = (row+1) % 6; break;
+      case '#': if (row == 0) next<reset_confirm>(); break;
       case '*': back(); break;
     }
   }

@@ -33,3 +33,7 @@
 
 // Unconnected analog pin to be used as seed for the RNG
 #define PIN_UNCONNECTED A4
+
+// Alarm pin
+#define PIN_ALARM A3
+

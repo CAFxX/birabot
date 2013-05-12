@@ -21,6 +21,30 @@ class ux {
   virtual void on_back(int retVal) {};
 };
 
+template <unsigned max, unsigned delta=max, unsigned min=0>
+class ux_input_numeric {
+  unsigned value;
+  public:
+  ux_input_numeric(unsigned initial_value=0) {
+    value = initial_value;
+  }
+  void on_key(char key) {
+    if (key < '0' || key > '9') {
+      return;
+    }
+    value = value * 10 + (key - '0');
+    while (value >= max) {
+      value -= delta;
+    }
+    if (value < min) {
+      value = min;
+    }
+  }
+  operator unsigned() {
+    return value;
+  }
+};
+
 class uxmgr {
   
   static uxmgr singleton;
