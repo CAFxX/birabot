@@ -6,12 +6,12 @@ static void setup_pins() {
   // set the mode for all pins
   // keypad pins are configured internally by the Keypad library
   // LCD pins
-  pinMode(PIN_LCD0, OUTPUT);
-  pinMode(PIN_LCD1, OUTPUT);
-  pinMode(PIN_LCD2, OUTPUT);
-  pinMode(PIN_LCD3, OUTPUT);
-  pinMode(PIN_LCD4, OUTPUT);
-  pinMode(PIN_LCD5, OUTPUT);
+  pinMode(PIN_LCD_RS, OUTPUT);
+  pinMode(PIN_LCD_ENABLE, OUTPUT);
+  pinMode(PIN_LCD_D4, OUTPUT);
+  pinMode(PIN_LCD_D5, OUTPUT);
+  pinMode(PIN_LCD_D6, OUTPUT);
+  pinMode(PIN_LCD_D7, OUTPUT);
   // temperature sensor pin (digital)
   pinMode(PIN_TEMP_SENS, INPUT);
   // flame sensor (thermocouple) pin (analog)

@@ -1,14 +1,23 @@
 #include <stddef.h>
 
+static void __uxmgr_back();
+static void __uxmgr_back(int retVal);
+
 class ux {
   friend class uxmgr;
   protected:
-  ux *back;
-  ux() : back(NULL) {}
+  ux *prev;
+  ux() : prev(NULL) {}
+  template <class T> void show();
+  template <class T> void show(int param);
+  template <class T> void next();
+  template <class T> void next(int param);
+  void back() { __uxmgr_back(); }
+  void back(int retVal) { __uxmgr_back(retVal); }
   public:
   virtual void draw() = 0;
   virtual void on_init(int param) {};
-  virtual void on_key(char key) {};
+  virtual void on_key(char key) { __uxmgr_back(); }
   virtual void on_back(int retVal) {};
 };
 
@@ -36,19 +45,18 @@ class uxmgr {
   }
 
   template <class T>
-  void _show(ux *back = NULL) {
-    if (curr != NULL && back == NULL)
+  void _show(ux *prev = NULL) {
+    if (curr != NULL && prev == NULL)
       delete curr;
     curr = new T();
-    curr->back = back;
+    curr->prev = prev;
   }
   
   template <class T>
-  void _show(ux *back, int param) {
-    _show<T>(back);
+  void _show(ux *prev, int param) {
+    _show<T>(prev);
     curr->on_init(param);
   }
-
   
   void _back(int retVal) {
     _back();
@@ -56,12 +64,12 @@ class uxmgr {
   }
 
   void _back() {
-    ux *back = curr->back;
-    if (back == NULL)
+    ux *prev = curr->prev;
+    if (prev == NULL)
       return;
-    curr->back = NULL;
+    curr->prev = NULL;
     delete curr;
-    curr = back;
+    curr = prev;
   }
   
   void _draw() {
@@ -73,8 +81,8 @@ class uxmgr {
   }
   
   template <class T>
-  static void show(ux *back = NULL) {
-    get()._show<T>(back);
+  static void show(ux *prev = NULL) {
+    get()._show<T>(prev);
   }
 
   template <class T>
@@ -83,8 +91,8 @@ class uxmgr {
   }
 
   template <class T>
-  static void show(ux *back, int param) {
-    get()._show<T>(back, param);
+  static void show(ux *prev, int param) {
+    get()._show<T>(prev, param);
   }
 
   static void back() {
@@ -104,5 +112,31 @@ class uxmgr {
   }
   
 };
+
+static void __uxmgr_back() {
+  uxmgr::back();
+}
+
+static void __uxmgr_back(int retVal) {
+  uxmgr::back(retVal);
+}
+
+template <class T> void ux::show() {
+  uxmgr::show<T>();
+}
+
+template <class T> void ux::show(int param) {
+  uxmgr::show<T>(param);
+}
+
+template <class T> void ux::next() {
+  uxmgr::show<T>(this);
+}
+
+template <class T> void ux::next(int param) {
+  uxmgr::show<T>(this, param);
+}
+
+
 
 

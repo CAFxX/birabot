@@ -214,6 +214,52 @@ class microfs {
     return used;
   }
   
+  // amount of space currently usable by file data (upper bound!)
+  size_t free() {
+    size_t pos = 0, free = 0;
+    while (pos < size) {
+      microfsfile f = read_header(pos);
+      if (f.is_valid() && f.id == 0) {
+        free += f.size;
+      }
+      pos += f.stride();
+    }
+    return free;
+  }
+  
+  // size of the whole fs
+  size_t total() {
+    return size;
+  }
+  
+  // number of files currently on disk
+  byte files() {
+    size_t pos = 0;
+    byte count = 0;
+    while (pos < size) {
+      microfsfile f = read_header(pos);
+      if (f.is_valid() && f.id != 0) {
+        count++;
+      }
+      pos += f.stride();
+    }
+    return count;
+  }  
+  
+  // size of the largest free chunk
+  byte max_free_chunk() {
+    size_t pos = 0;
+    byte max_size = 0;
+    while (pos < size) {
+      microfsfile f = read_header(pos);
+      if (f.is_valid() && f.id == 0) {
+        max_size = max(max_size, f.get_size());
+      }
+      pos += f.stride();
+    }
+    return max_size;
+  }  
+  
   // open an existing file with id <file_id>
   microfsfile open(byte file_id) {
     size_t pos = 0;
@@ -228,13 +274,21 @@ class microfs {
   }
   
   // allocate and create a new file on disk of size <size>
-  microfsfile create(byte size) {
+  microfsfile create(byte size, byte file_id=0) {
     microfsfile unallocated = find_alloc(size);
     if (!unallocated.is_valid())
       return microfsfile();
-    byte id = find_id();
-    if (id == 0)
-      return microfsfile();
+    
+    byte id;
+    if (file_id == 0) {
+      id = find_id();
+      if (id == 0)
+        return microfsfile();
+    } else {
+      if (open(file_id).is_valid()) 
+        return microfsfile();
+      id = file_id;
+    }
     microfsfile newfile(id, size);
     size_t newfile_pos = unallocated.offset;
     // find_alloc will return either a chunk of size == size or size >= size + 2

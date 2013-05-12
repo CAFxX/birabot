@@ -1,6 +1,6 @@
 #include "pins.h"
 
-LiquidCrystal lcd(PIN_LCD0, PIN_LCD1, PIN_LCD2, PIN_LCD3, PIN_LCD4, PIN_LCD5);
+LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_ENABLE, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN_LCD_D7);
 
 #define printAt(x, y, data) {               \
   lcd.setCursor((x), (y));                  \
@@ -72,7 +72,7 @@ class splash_screen : public ux {
     printAt(5, 1, __DATE__);
   }
   void on_key(char) {
-    uxmgr::show<main_menu>();
+    show<main_menu>();
   };
 };
 
@@ -85,10 +85,10 @@ class main_menu : public ux {
   }
   void on_key(char key) {
     switch (key) {
-      case 'A': uxmgr::show<manual_control>(); break;
-      case 'B': uxmgr::show<program_progress>(); break;
-      case 'C': uxmgr::show<program_menu>(); break;
-      case 'D': uxmgr::show<reset_confirm>(); break;
+      case 'A': next<manual_control>(); break;
+      case 'B': next<program_progress>(); break;
+      case 'C': next<program_menu>(); break;
+      case 'D': show<reset_confirm>(); break;
     }
   }  
 };
@@ -111,8 +111,8 @@ class program_abort : public ux {
   
   void on_key(char key) {
     switch (key) {
-      case '*': uxmgr::show<program_progress>(); break;
-      case '#': do_program_abort(); uxmgr::show<main_menu>(); break;
+      case '*': back(); break;
+      case '#': do_program_abort(); show<main_menu>(); break;
     }
   }
   
@@ -124,9 +124,11 @@ class program_abort : public ux {
 
 class program_list : public ux {
   byte file_id;
+  bool typing;
   public:
   program_list() {
     file_id = 0;
+    typing = false;
   }
   void draw() {
     program *prg;
@@ -136,15 +138,29 @@ class program_list : public ux {
   }
   void on_key(char key) {
     switch (key) {
-      case 'A': file_id--; break;
-      case 'B': file_id -= 10; break;
-      case 'C': file_id += 10; break;
-      case 'D': file_id++; break;
+      case 'A': typing = false; file_id--; break;
+      case 'B': typing = false; file_id -= 10; break;
+      case 'C': typing = false; file_id += 10; break;
+      case 'D': typing = false; file_id++; break;
       case '0': case '1': case '2': case '3': case '4': 
-      case '5': case '6': case '7': case '8': case '9':
+      case '5': case '6': case '7': case '8': case '9': {
+        int new_file_id;
+        if (!typing) {
+          new_file_id = 0;
+          typing = true;
+        } else {
+          new_file_id = file_id;
+          new_file_id *= 10;
+        }
+        new_file_id += key - '0';
+        if (new_file_id > 255) {
+          new_file_id %= 100;
+        }
+        file_id = new_file_id;
         break;
-      case '#': uxmgr::back(file_id); break;
-      case '*': uxmgr::back(); break;
+      }
+      case '#': back(file_id); break;
+      case '*': back(); break;
     }
   }
 
@@ -159,6 +175,7 @@ class program_list : public ux {
 */
 class program_menu : public ux {
   char last_key;
+  byte copy_source_file_id;
   public:
   program_menu() {
     last_key = 0;
@@ -172,18 +189,29 @@ class program_menu : public ux {
   void on_key(char key) {
     last_key = key;
     switch (key) {
-      case 'A': uxmgr::show<program_list>(this); break;
-      case 'B': uxmgr::show<program_list>(this); break;
-      case 'C': uxmgr::show<program_list>(this); break;
-      case 'D': uxmgr::show<program_list>(this); break;
-      case '*': uxmgr::back(); break;
+      case 'A': 
+      case 'B': 
+      case 'C': 
+      case 'D': next<program_list>(); break;
+      case '*': back(); break;
     }
   }
   void on_back(int retVal) {
     switch (last_key) {
-      case 'A': uxmgr::show<program_setup>(this, retVal); break;
-      case 'B': uxmgr::show<program_setup>(this, retVal); break;
-      case 'C': break;
+      case 'A': 
+      case 'B': next<program_setup>(retVal); break;
+      case 'C': 
+        last_key = 'c'; 
+        copy_source_file_id = retVal;
+        show<program_list>(); 
+        break;
+      case 'c': {
+        microfsfile src = fs.open(copy_source_file_id);
+        microfsfile dst = fs.create(src.get_size(), retVal);
+        for (int i=0; i<src.get_size(); i++) {
+          dst.write_byte(i, src.read_byte(i));
+        }
+      }
       case 'D': fs.remove(retVal); break;
     }
   }
@@ -216,7 +244,7 @@ class program_progress : public ux {
   
   void on_key(char key) {
     switch (key) {
-      case '*': uxmgr::show<program_abort>(); break;
+      case '*': next<program_abort>(); break;
     }
   }
   
@@ -277,7 +305,7 @@ class manual_control : public ux {
       case '*': 
         if (temp_valid) {
           // TODO: send temp=0 to the engine
-          uxmgr::show<main_menu>(); 
+          back(); 
         } else {
           temp_valid = true;
           temp_set = temp_prev;
@@ -339,13 +367,51 @@ class reset_confirm : public ux {
   }
   void on_key(char key) {
     switch (key) {
-      case '*': uxmgr::show<main_menu>(); break;
-      case '#': do_reset(); uxmgr::show<main_menu>(); break;
+      case '*': back(); break;
+      case '#': do_reset(); break;
     }
   }
   void do_reset() {
     fs.format();
     reset();
+    while (true);
+  }
+};
+
+class microfs_tool : public ux {
+  byte row;
+  boolean check;
+  size_t used;
+  size_t free;
+  size_t total;
+  byte files;
+  byte max_free_chunk;
+  microfs_tool() {
+    row = 0;
+    check = fs.check_disk();
+    used = fs.used();
+    free = fs.free();
+    total = fs.total();
+    files = fs.files();
+    max_free_chunk = fs.max_free_chunk();
+  }
+  void draw() {
+    switch (row) {          
+      case 0: printfAt(0, 0, "Check %10s", check ? "OK" : "ERROR"); break;
+      case 1: printfAt(0, 0, "Used %11d", used); break;
+      case 2: printfAt(0, 0, "Free %11d", free); break;
+      case 3: printfAt(0, 0, "Total %10d", total); break;
+      case 4: printfAt(0, 0, "Files %10d", files); break;
+      case 5: printfAt(0, 0, "Max chunk %6d", max_free_chunk); break;
+    }
+    printAt(0, 1, "*-Back          ");
+  }
+  void on_key(char key) {
+    switch (key) {
+      case 'A': row = (row-1) % 6; break;
+      case 'D': row = (row+1) % 6; break;
+      case '*': back(); break;
+    }
   }
 };
 
