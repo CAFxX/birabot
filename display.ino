@@ -53,8 +53,7 @@ void setup_display() {
 }
 
 class splash_screen : public ux {
-  public:
-  splash_screen() {
+  void on_show() {
     lcd.createChar(0, logo00);  
     lcd.createChar(1, logo01);  
     lcd.createChar(2, logo02);  
@@ -231,8 +230,7 @@ class program_menu : public ux {
    Progress screen shown during program execution
 */
 class program_progress : public ux {
-  public:
-  program_progress() {
+  void on_show() {
     lcd.createChar(0, sym_ignition_off);  
     lcd.createChar(1, sym_ignition_on);  
     lcd.createChar(2, sym_gasvalve_off);  
@@ -281,6 +279,9 @@ class manual_control : public ux {
   manual_control() {
     temp_set = 0;
     temp_valid = false;
+  }
+
+  void on_show() {
     lcd.createChar(0, sym_ignition_off);  
     lcd.createChar(1, sym_ignition_on);  
     lcd.createChar(2, sym_gasvalve_off);  
