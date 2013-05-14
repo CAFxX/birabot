@@ -8,6 +8,7 @@ class ux {
   protected:
   ux *prev;
   ux() : prev(NULL) {}
+  ~ux() { if (prev != NULL) delete prev; }
   template <class T> void show();
   template <class T> void show(int param);
   template <class T> void next();
