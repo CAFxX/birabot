@@ -1,4 +1,4 @@
-byte logo00[] = {
+PROGMEM byte logo00[] = {
   B00001,
   B00010,
   B01110,
@@ -8,7 +8,7 @@ byte logo00[] = {
   B01101,
   B01101
 };
-byte logo01[] = {
+PROGMEM byte logo01[] = {
   B11000,
   B01110,
   B10001,
@@ -18,7 +18,7 @@ byte logo01[] = {
   B10111,
   B10111
 };
-byte logo02[] = {
+PROGMEM byte logo02[] = {
   B00000,
   B00000,
   B00000,
@@ -28,7 +28,7 @@ byte logo02[] = {
   B10000,
   B11000
 };
-byte logo03[] = {
+PROGMEM byte logo03[] = {
   B11111,
   B10000,
   B00111,
@@ -38,7 +38,7 @@ byte logo03[] = {
   B00101,
   B11111
 };
-byte logo10[] = {
+PROGMEM byte logo10[] = {
   B01101,
   B01101,
   B01101,
@@ -48,7 +48,7 @@ byte logo10[] = {
   B01111,
   B00111
 };
-byte logo11[] = {
+PROGMEM byte logo11[] = {
   B10110,
   B10110,
   B10110,
@@ -58,7 +58,7 @@ byte logo11[] = {
   B11111,
   B11100
 };
-byte logo12[] = {
+PROGMEM byte logo12[] = {
   B11000,
   B11000,
   B11000,
@@ -68,7 +68,7 @@ byte logo12[] = {
   B10000,
   B00000
 };
-byte logo13[] = {
+PROGMEM byte logo13[] = {
   B00100,
   B00111,
   B00000,

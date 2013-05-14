@@ -7,9 +7,20 @@ LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_ENABLE, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6
   lcd.print(data);                          \
 }
 
+#define printAt_P(x, y, data) {             \
+  char __buf__[sizeof(data)];               \
+  strcpy_P(__buf__, PSTR(data));            \
+  printAt(x, y, __buf__);                   \
+}
+
 #define printScreen(line0, line1) {         \
   printAt(0, 0, line0);                     \
   printAt(0, 1, line1);                     \
+}
+
+#define printScreen_P(line0, line1) {       \
+  printAt_P(0, 0, line0);                   \
+  printAt_P(0, 1, line1);                   \
 }
 
 #define printfAt(x, y, fmt, ...) {          \
@@ -19,9 +30,21 @@ LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_ENABLE, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6
   printAt(x, y, buf);                       \
 }
 
+#define printfAt_P(x, y, fmt, ...) {        \
+  char __buf__[sizeof(fmt)];                \
+  strcpy_P(__buf__, PSTR(fmt));             \
+  printfAt(x, y, __buf__, __VA_ARGS__);     \
+}
+
 #define writeAt(x, y, b) {                  \
   lcd.setCursor((x), (y));                  \
   lcd.write((byte)b);                       \
+}
+
+#define lcdCreateCharPGM(id, data) {        \
+  byte __buf__[8];                          \
+  memcpy_P(__buf__, data, 8);               \
+  lcd.createChar(id, __buf__);              \
 }
 
 class main_menu;
@@ -54,18 +77,18 @@ void setup_display() {
 
 class splash_screen : public ux {
   void on_show() {
-    lcd.createChar(0, logo00);  
-    lcd.createChar(1, logo01);  
-    lcd.createChar(2, logo02);  
-    lcd.createChar(3, logo03);  
-    lcd.createChar(4, logo10);  
-    lcd.createChar(5, logo11);  
-    lcd.createChar(6, logo12);  
-    lcd.createChar(7, logo13);  
+    lcdCreateCharPGM(0, logo00);  
+    lcdCreateCharPGM(1, logo01);  
+    lcdCreateCharPGM(2, logo02);  
+    lcdCreateCharPGM(3, logo03);  
+    lcdCreateCharPGM(4, logo10);  
+    lcdCreateCharPGM(5, logo11);  
+    lcdCreateCharPGM(6, logo12);  
+    lcdCreateCharPGM(7, logo13);  
   }
   void draw() {
-    printAt(5, 0, "BIRABOT");
-    printAt(5, 1, __DATE__);
+    printAt_P(5, 0, "BIRABOT");
+    printAt_P(5, 1, __DATE__);
     // draw the logo
     writeAt(0, 0, 0);
     writeAt(1, 0, 1);
@@ -83,7 +106,7 @@ class splash_screen : public ux {
 
 class main_menu : public ux {
   void draw() {
-    printScreen(
+    printScreen_P(
       "A-Manual   Run-B",
       "C-Prog   Tools-D"
     );
@@ -108,7 +131,7 @@ class main_menu : public ux {
 class program_abort : public ux {
   
   void draw() {
-    printScreen(
+    printScreen_P(
       " Abort program? ",
       "*-Abort   Cont-#"
     );
@@ -137,9 +160,9 @@ class program_list : public ux {
   }
   void draw() {
     program *prg;
-    printfAt(0, 0, "%03d %08s %03d", 
+    printfAt_P(0, 0, "%03d %08s %03d", 
       file_id, program_name(prg), program_duration);
-    printAt(0, 1, "*-Back    Menu-#");
+    printAt_P(0, 1, "*-Back    Menu-#");
   }
   void on_key(char key) {
     switch (key) {
@@ -186,7 +209,7 @@ class program_menu : public ux {
     last_key = 0;
   }
   void draw() {
-    printScreen(
+    printScreen_P(
       "A-Create  Edit-B",
       "C-Copy  Delete-D"
     );
@@ -243,14 +266,14 @@ class program_progress : public ux {
     program *prg;
   
     // first line
-    printfAt(0, 0, "%02d°\x7e%02d°    %c %c %c", 
+    printfAt_P(0, 0, "%02d°\x7e%02d°    %c %c %c", 
       get_temperature(), temperature_at(prg, s/60), 
       ignition_on() ? 1 : 0, 
       gasvalve_on() ? 3 : 2, 
       flame_on() ? 5 : 4);
     
     // second line
-    printfAt(0, 1, "%8s %03d+03d", 
+    printfAt_P(0, 1, "%8s %03d+03d", 
       program_name(prg), s/60, s%60);
   }
   
@@ -292,16 +315,16 @@ class manual_control : public ux {
   
   void draw() {
     // first line
-    printfAt(0, 0, "%02d°\x7e%02d°    %c %c %c", 
+    printfAt_P(0, 0, "%02d°\x7e%02d°    %c %c %c", 
       get_temperature(), temp_set, 
       ignition_on() ? 1 : 0, 
       gasvalve_on() ? 3 : 2, 
       flame_on() ? 5 : 4);
     
     if (temp_valid) {
-      printAt(0, 1, "*-Stop  Temp-0-9");
+      printAt_P(0, 1, "*-Stop  Temp-0-9");
     } else {
-      printAt(0, 1, "*-Cancel   Set-#");
+      printAt_P(0, 1, "*-Cancel   Set-#");
       lcd.setCursor(0, 5);
       lcd.cursor();
     }
@@ -379,11 +402,11 @@ class program_setup : public ux {
     int program_duration;
     
     // first line
-    printfAt(0, 0, "%03d %08s %03d", 
+    printfAt_P(0, 0, "%03d %08s %03d", 
       file_id, program_name(prg), program_duration);
     
     // second line
-    printfAt(0, 1, "%02d/%02d   %c %03d %02d", 
+    printfAt_P(0, 1, "%02d/%02d   %c %03d %02d", 
       row, rows+1, type_mode() ? 'C' : 'L', type_duration(), type_temp());
     
     switch (field) {
@@ -443,7 +466,7 @@ class program_setup : public ux {
 
 class program_save : public ux {
   void draw() {
-    printScreen(
+    printScreen_P(
       "  Save changes? ",
       "*-Discard Save-#"
     );    
@@ -465,7 +488,7 @@ class program_save : public ux {
 */
 class reset_confirm : public ux {
   void draw() {
-    printScreen(
+    printScreen_P(
       "DELETE ALL DATA?",
       "*-Abort Delete-#"
     );
@@ -503,17 +526,17 @@ class microfs_tool : public ux {
   }
   void draw() {
     switch (row) {          
-      case 0: printfAt(0, 0, "Check     %6s", check ? "OK" : "ERROR"); break;
-      case 1: printfAt(0, 0, "Used      %6d", used); break;
-      case 2: printfAt(0, 0, "Free      %6d", free); break;
-      case 3: printfAt(0, 0, "Total     %6d", total); break;
-      case 4: printfAt(0, 0, "Files     %6d", files); break;
-      case 5: printfAt(0, 0, "Max chunk %6d", max_free_chunk); break;
+      case 0: printfAt_P(0, 0, "Check     %6s", check ? "OK" : "ERROR"); break;
+      case 1: printfAt_P(0, 0, "Used      %6d", used); break;
+      case 2: printfAt_P(0, 0, "Free      %6d", free); break;
+      case 3: printfAt_P(0, 0, "Total     %6d", total); break;
+      case 4: printfAt_P(0, 0, "Files     %6d", files); break;
+      case 5: printfAt_P(0, 0, "Max chunk %6d", max_free_chunk); break;
     }
     if (row == 0) {
-      printAt(0, 1, "*-Back  Format-#");
+      printAt_P(0, 1, "*-Back  Format-#");
     } else {
-      printAt(0, 1, "*-Back          ");
+      printAt_P(0, 1, "*-Back          ");
     }
   }
   void on_key(char key) {

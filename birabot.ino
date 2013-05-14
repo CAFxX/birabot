@@ -22,14 +22,14 @@ void setup() {
 size_t seconds = 0;
 
 static void resume() {
-  microfsfile resumefile = open_file(1);
+  microfsfile resumefile = fs.open(1);
   if (!resumefile.is_valid() || resumefile.get_size() != 3) {
     fs.remove(1);
     return;
   }
   byte buf[3] = {0};
   resumefile.read_bytes(0, buf, sizeof(buf));
-  microfsfile programfile = open_file(buf[0]);
+  microfsfile programfile = fs.open(buf[0]);
   if (!programfile.is_valid()) {
     fs.remove(1);
     return;

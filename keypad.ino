@@ -13,7 +13,7 @@ const char keys[rows][cols] = {
   {'#','0','*','D'}
 };
 
-const char alphakeys[10][7] = {
+PROGMEM const char alphakeys[10][7] = {
   {' ', '-', '0'},
   {'A', 'B', '1'},
   {'C', 'D', '2'},
