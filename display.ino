@@ -1,6 +1,5 @@
 #include "pins.h"
-
-LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_ENABLE, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN_LCD_D7);
+#include "custom_chars.h"
 
 #define printAt(x, y, data) {               \
   lcd.setCursor((x), (y));                  \
@@ -60,19 +59,19 @@ class reset_confirm;
 class splash_screen;
 class microfs_tool;
 
-#include "custom_chars.h"
+LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_ENABLE, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN_LCD_D7);
 
-void clear_display() {
+static void setup_display() {
+  lcd.begin(16, 2);
+  clear_display();
+  uxmgr::show<splash_screen>();
+}
+
+static void clear_display() {
   lcd.clear();
   lcd.noBlink();
   lcd.noCursor();
   lcd.noAutoscroll();
-}
-
-void setup_display() {
-  lcd.begin(16, 2);
-  clear_display();
-  uxmgr::show<splash_screen>();
 }
 
 class splash_screen : public ux {
@@ -548,4 +547,5 @@ class microfs_tool : public ux {
     }
   }
 };
+
 

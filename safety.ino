@@ -44,19 +44,19 @@ static void safety_control() {
   }
 }
 
-void write_output_pins() {
+static void write_output_pins() {
   digitalWrite(PIN_IGNITION, ignition_on());
   digitalWrite(PIN_GASVALVE, gasvalve_on());
 }
 
-boolean safety_control_ignition_override() {
+static boolean safety_control_ignition_override() {
   if (ignition_on())
     return false;
   safety_ignition_override = 0;
   return true;
 }
 
-void reset() {
+static void reset() {
   if (watchdog_expire) {
     return;
   }
@@ -67,7 +67,7 @@ void reset() {
   watchdog_expire = true;
 }
 
-void flame(boolean on) {
+static void flame(boolean on) {
   // if a reset was requested, do not allow controlling the flame
   if (watchdog_expire) {
     return;
@@ -79,15 +79,15 @@ void flame(boolean on) {
   flame_required = on;
 }
 
-boolean gasvalve_on() {
+static boolean gasvalve_on() {
   return safety_gasvalve_on;
 }
 
-boolean ignition_on() {
+static boolean ignition_on() {
   return safety_ignition_override < safety_ignition_override_threshold;
 }
 
-boolean flame_on() {
+static boolean flame_on() {
   return flame_level > flame_level_threshold;
 }
 
