@@ -15,8 +15,9 @@ class ux {
   void back() { __uxmgr_back(); }
   void back(int retVal) { __uxmgr_back(retVal); }
   public:
-  virtual void draw() = 0;
   virtual void on_init(int param) {};
+  virtual void on_show() {};
+  virtual void draw() = 0;
   virtual void on_key(char key) { __uxmgr_back(); }
   virtual void on_back(int retVal) {};
 };
@@ -77,6 +78,7 @@ class uxmgr {
       delete curr;
     curr = new T();
     curr->prev = prev;
+    curr->on_show();
   }
   
   template <class T>
@@ -97,6 +99,7 @@ class uxmgr {
     curr->prev = NULL;
     delete curr;
     curr = prev;
+    curr->on_show();
   }
   
   void _draw() {
