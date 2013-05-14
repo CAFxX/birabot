@@ -293,9 +293,10 @@ class program_progress : public ux {
 */
 class manual_control : public ux {
   
-  byte temp_set;
   byte temp_prev;
   boolean temp_valid;
+  
+  ux_input_numeric<100, 100> temp_set;
   
   public:
   manual_control() {
@@ -315,7 +316,7 @@ class manual_control : public ux {
   void draw() {
     // first line
     printfAt_P(0, 0, "%02d°\x7e%02d°    %c %c %c", 
-      get_temperature(), temp_set, 
+      get_temperature(), temp_set(), 
       ignition_on() ? 1 : 0, 
       gasvalve_on() ? 3 : 2, 
       flame_on() ? 5 : 4);
@@ -335,11 +336,9 @@ class manual_control : public ux {
       case '5': case '6': case '7': case '8': case '9':
         if (temp_valid) {
           temp_valid = false;
-          temp_prev = temp_set;
+          temp_prev = temp_set();
         }
-        temp_set %= 10;
-        temp_set *= 10;
-        temp_set += key - '0';
+        temp_set.on_key(key);
         break;
       case '#':
         temp_valid = true;
