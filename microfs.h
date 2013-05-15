@@ -330,7 +330,7 @@ class microfs {
     // FIXME: proceed backwards
     /* CRITICAL SECTION */ {
       while (new_size > 255) {
-        new_pos += write_header(new_pos, microfsfile(0, 255)).stride();
+        new_pos += write_header(new_pos, microfsfile(0, 255), false).stride();
         new_size -= 255;
       }
       write_header(new_pos, microfsfile(0, new_size));
@@ -431,12 +431,17 @@ class microfs {
     return microfsfile(file_id, file_size, pos);
   }
   
-  microfsfile write_header(size_t pos, microfsfile f) {
+  microfsfile write_header(size_t pos, microfsfile f, boolean backward=true) {
     if (pos < 0 || pos+2 > size)
       return f;
     /* CRITICAL SECTION */ {
-      eeprom_update(pos+1, f.size);
-      eeprom_update(pos+0, f.id);
+      if (backward) {
+        eeprom_update(pos+1, f.size);
+        eeprom_update(pos+0, f.id);
+      } else {
+        eeprom_update(pos+0, f.id);
+        eeprom_update(pos+1, f.size);
+      }
     }
     f.offset = pos;
     return f;
