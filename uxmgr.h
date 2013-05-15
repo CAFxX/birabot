@@ -65,7 +65,7 @@ class uxmgr {
   
   template <class T>
   void show(ux *prev = NULL) {
-    if (curr != NULL && prev == NULL)
+    if (prev == NULL)
       delete curr;
     curr = new T();
     curr->prev = prev;
