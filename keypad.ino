@@ -13,17 +13,21 @@ const char keys[rows][cols] = {
   {'#','0','*','D'}
 };
 
-PROGMEM const char alphakeys[10][7] = {
-  {' ', '-', '0'},
-  {'A', 'B', '1'},
-  {'C', 'D', '2'},
-  {'E', 'F', '3'},
-  {'G', 'H', '4'},
-  {'I', 'J', 'K', '5'},
-  {'L', 'M', 'N', '6'},
-  {'O', 'P', 'Q', '7'},
-  {'R', 'S', 'T', '8'},
-  {'U', 'V', 'W', 'X', 'Y', 'Z', '9'}
+PROGMEM const char alphakeys[] = {
+  /*  0 */ ' ', '-', '0',
+  /*  3 */ 'A', 'B', '1',
+  /*  6 */ 'C', 'D', '2',
+  /*  9 */ 'E', 'F', '3',
+  /* 12 */ 'G', 'H', '4',
+  /* 15 */ 'I', 'J', 'K', '5',
+  /* 19 */ 'L', 'M', 'N', '6',
+  /* 23 */ 'O', 'P', 'Q', '7',
+  /* 27 */ 'R', 'S', 'T', '8',
+  /* 31 */ 'U', 'V', 'W', 'X', 'Y', 'Z', '9' /* 38 */
+};
+
+PROGMEM const byte alphakeys_idx[] = {
+  0, 3, 6, 9, 12, 15, 19, 23, 27, 31, 38
 };
 
 Keypad keypad( makeKeymap(keys), rowPins, colPins, rows, cols );
