@@ -1,8 +1,5 @@
 #include <stddef.h>
 
-static void __uxmgr_back();
-static void __uxmgr_back(int retVal);
-
 class ux {
   friend class uxmgr;
   protected:
