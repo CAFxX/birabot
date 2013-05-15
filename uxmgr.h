@@ -8,18 +8,18 @@ class ux {
   protected:
   ux *prev;
   ux() : prev(NULL) {}
-  ~ux() { delete prev; prev = NULL; }
+  virtual ~ux() { delete prev; prev = NULL; }
   template <class T> void show();
   template <class T> void show(int param);
   template <class T> void next();
   template <class T> void next(int param);
-  void back() { __uxmgr_back(); }
-  void back(int retVal) { __uxmgr_back(retVal); }
+  void back();
+  void back(int retVal);
   public:
   virtual void on_init(int param) {};
   virtual void on_show() {};
   virtual void draw() = 0;
-  virtual void on_key(char key) { __uxmgr_back(); }
+  virtual void on_key(char key) { back(); }
   virtual void on_back(int retVal) {};
 };
 
@@ -61,8 +61,6 @@ class uxmgr {
   }
   
   public:
-  
-  static const char left_arrow = 0x7E;
   
   static uxmgr& get() {
     return singleton;
@@ -111,63 +109,28 @@ class uxmgr {
     curr->on_key(key);
   }
   
-  template <class T>
-  static void show(ux *prev = NULL) {
-    get()._show<T>(prev);
-  }
-
-  template <class T>
-  static void show(int param) {
-    get()._show<T>(param);
-  }
-
-  template <class T>
-  static void show(ux *prev, int param) {
-    get()._show<T>(prev, param);
-  }
-
-  static void back() {
-    get()._back();
-  }
-
-  static void back(int retVal) {
-    get()._back(retVal);
-  }
-
-  static void on_key(char key) {
-    get()._on_key(key);
-  }
-  
-  static void draw() {
-    get()._draw();
-  }
-  
 };
 
-static void __uxmgr_back() {
-  uxmgr::back();
+inline void ux::back() { 
+  uxmgr::get().back(); 
 }
 
-static void __uxmgr_back(int retVal) {
-  uxmgr::back(retVal);
+inline void ux::back(int retVal) { 
+  uxmgr::get().back(retVal);
 }
 
 template <class T> void ux::show() {
-  uxmgr::show<T>();
+  uxmgr::get().show<T>();
 }
 
 template <class T> void ux::show(int param) {
-  uxmgr::show<T>(param);
+  uxmgr::get().show<T>(param);
 }
 
 template <class T> void ux::next() {
-  uxmgr::show<T>(this);
+  uxmgr::get().show<T>(this);
 }
 
 template <class T> void ux::next(int param) {
-  uxmgr::show<T>(this, param);
+  uxmgr::get().show<T>(this, param);
 }
-
-
-
-
