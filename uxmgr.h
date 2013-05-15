@@ -64,12 +64,7 @@ class uxmgr {
   }
   
   template <class T>
-  void _show(int param) {
-    _show<T>(NULL, param);
-  }
-
-  template <class T>
-  void _show(ux *prev = NULL) {
+  void show(ux *prev = NULL) {
     if (curr != NULL && prev == NULL)
       delete curr;
     curr = new T();
@@ -78,17 +73,17 @@ class uxmgr {
   }
   
   template <class T>
-  void _show(ux *prev, int param) {
-    _show<T>(prev);
+  void show(ux *prev, int param) {
+    show<T>(prev);
     curr->on_init(param);
   }
   
-  void _back(int retVal) {
-    _back();
-    curr->on_back(retVal);
+  template <class T>
+  void show(int param) {
+    show<T>(NULL, param);
   }
 
-  void _back() {
+  void back() {
     ux *prev = curr->prev;
     if (prev == NULL)
       return;
@@ -98,11 +93,16 @@ class uxmgr {
     curr->on_show();
   }
   
-  void _draw() {
+  void back(int retVal) {
+    back();
+    curr->on_back(retVal);
+  }
+
+  void draw() {
     curr->draw();
   }
   
-  void _on_key(char key) {
+  void on_key(char key) {
     curr->on_key(key);
   }
   
