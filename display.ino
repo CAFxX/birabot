@@ -1,14 +1,21 @@
 #include "pins.h"
 #include "custom_chars.h"
 
+#define __string_PGM(data)                  \
+  char __buf__[sizeof(data)];               \
+  strcpy_P(__buf__, PSTR(data));             
+
+#define __blob_PGM(blobname, size)          \
+  char __buf__[size];                       \
+  memcpy_P(__buf__, blobname, size);         
+
 #define printAt(x, y, data) {               \
   lcd.setCursor((x), (y));                  \
   lcd.print(data);                          \
 }
 
 #define printAt_P(x, y, data) {             \
-  char __buf__[sizeof(data)];               \
-  strcpy_P(__buf__, PSTR(data));            \
+  string_PGM(data);                         \
   printAt(x, y, __buf__);                   \
 }
 
@@ -30,8 +37,7 @@
 }
 
 #define printfAt_P(x, y, fmt, ...) {        \
-  char __buf__[sizeof(fmt)];                \
-  strcpy_P(__buf__, PSTR(fmt));             \
+  string_PGM(fmt);                          \
   printfAt(x, y, __buf__, __VA_ARGS__);     \
 }
 
@@ -40,9 +46,11 @@
   lcd.write((byte)b);                       \
 }
 
-#define lcdCreateCharPGM(id, data) {        \
-  byte __buf__[8];                          \
-  memcpy_P(__buf__, data, 8);               \
+#define lcdCreateCharPGM(id, data, invert) {\
+  __blob_PGM(id, 8);                        \
+  if (invert) {                             \
+    lcd_char_invert(__buf__);               \
+  }                                         \
   lcd.createChar(id, __buf__);              \
 }
 
@@ -76,14 +84,14 @@ static void clear_display() {
 
 class splash_screen : public ux {
   void on_show() {
-    lcdCreateCharPGM(0, logo00);  
-    lcdCreateCharPGM(1, logo01);  
-    lcdCreateCharPGM(2, logo02);  
-    lcdCreateCharPGM(3, logo03);  
-    lcdCreateCharPGM(4, logo10);  
-    lcdCreateCharPGM(5, logo11);  
-    lcdCreateCharPGM(6, logo12);  
-    lcdCreateCharPGM(7, logo13);  
+    lcdCreateCharPGM(0, logo00, false);  
+    lcdCreateCharPGM(1, logo01, false);  
+    lcdCreateCharPGM(2, logo02, false);  
+    lcdCreateCharPGM(3, logo03, false);  
+    lcdCreateCharPGM(4, logo10, false);  
+    lcdCreateCharPGM(5, logo11, false);  
+    lcdCreateCharPGM(6, logo12, false);  
+    lcdCreateCharPGM(7, logo13, false);  
   }
   void draw() {
     printAt_P(5, 0, "BIRABOT");
@@ -253,12 +261,12 @@ class program_menu : public ux {
 */
 class program_progress : public ux {
   void on_show() {
-    lcd.createChar(0, sym_ignition_off);  
-    lcd.createChar(1, sym_ignition_on);  
-    lcd.createChar(2, sym_gasvalve_off);  
-    lcd.createChar(3, sym_gasvalve_on);  
-    lcd.createChar(4, sym_flame_off);  
-    lcd.createChar(5, sym_flame_on);  
+    lcdCreateCharPGM(0, sym_ignition_off, false);  
+    lcdCreateCharPGM(1, sym_ignition_off, true);  
+    lcdCreateCharPGM(2, sym_gasvalve_off, false);  
+    lcdCreateCharPGM(3, sym_gasvalve_off, true);  
+    lcdCreateCharPGM(4, sym_flame_off, false);  
+    lcdCreateCharPGM(5, sym_flame_off, true);  
   }
   void draw() {
     int s = 725;
@@ -305,12 +313,12 @@ class manual_control : public ux {
   }
 
   void on_show() {
-    lcd.createChar(0, sym_ignition_off);  
-    lcd.createChar(1, sym_ignition_on);  
-    lcd.createChar(2, sym_gasvalve_off);  
-    lcd.createChar(3, sym_gasvalve_on);  
-    lcd.createChar(4, sym_flame_off);  
-    lcd.createChar(5, sym_flame_on);  
+    lcdCreateCharPGM(0, sym_ignition_off, false);  
+    lcdCreateCharPGM(1, sym_ignition_off, true);  
+    lcdCreateCharPGM(2, sym_gasvalve_off, false);  
+    lcdCreateCharPGM(3, sym_gasvalve_off, true);  
+    lcdCreateCharPGM(4, sym_flame_off, false);  
+    lcdCreateCharPGM(5, sym_flame_off, true);  
   }
   
   void draw() {
@@ -524,7 +532,13 @@ class microfs_tool : public ux {
   }
   void draw() {
     switch (row) {          
-      case 0: printfAt_P(0, 0, "Check     %6s", check ? "OK" : "ERROR"); break;
+      case 0: 
+        if (check) {
+          printAt_P(0, 0, "Check         OK"); 
+        } else {
+          printAt_P(0, 0, "Check      ERROR"); 
+        }        
+        break;
       case 1: printfAt_P(0, 0, "Used      %6d", used); break;
       case 2: printfAt_P(0, 0, "Free      %6d", free); break;
       case 3: printfAt_P(0, 0, "Total     %6d", total); break;
