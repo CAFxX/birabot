@@ -40,6 +40,6 @@ static void resume() {
 }
 
 void loop() {
-  uxmgr::draw();
+  uxmgr::get().draw();
 }
 

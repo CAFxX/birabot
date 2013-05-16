@@ -34,7 +34,7 @@ Keypad keypad( makeKeymap(keys), rowPins, colPins, rows, cols );
 
 void keypadEvent(char key) {
   if (keypad.getState() == PRESSED) {
-    uxmgr::on_key(key);
+    uxmgr::get().on_key(key);
   }
 }
 

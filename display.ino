@@ -64,7 +64,7 @@ LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_ENABLE, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6
 static void setup_display() {
   lcd.begin(16, 2);
   clear_display();
-  uxmgr::show<splash_screen>();
+  uxmgr::get().show<splash_screen>();
 }
 
 static void clear_display() {
