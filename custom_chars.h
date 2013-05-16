@@ -79,18 +79,18 @@ PROGMEM byte logo13[] = {
   B11111
 };
 
-#define invert(name) { \
-  (~name[0]) & B11111, \
-  (~name[1]) & B11111, \
-  (~name[2]) & B11111, \
-  (~name[3]) & B11111, \
-  (~name[4]) & B11111, \
-  (~name[5]) & B11111, \
-  (~name[6]) & B11111, \
-  (~name[7]) & B11111  \
+#define lcd_char_invert(name) { \
+  name[0] = (~name[0]) & B11111; \
+  name[1] = (~name[1]) & B11111; \
+  name[2] = (~name[2]) & B11111; \
+  name[3] = (~name[3]) & B11111; \
+  name[4] = (~name[4]) & B11111; \
+  name[5] = (~name[5]) & B11111; \
+  name[6] = (~name[6]) & B11111; \
+  name[7] = (~name[7]) & B11111; \
 }
 
-byte sym_ignition_off[] = {
+PROGMEM byte sym_ignition_off[] = {
   B00000,
   B01110,
   B00100,
@@ -100,9 +100,8 @@ byte sym_ignition_off[] = {
   B01110,
   B00000
 };
-byte sym_ignition_on[] = invert(sym_ignition_off);
 
-byte sym_gasvalve_off[] = {
+PROGMEM byte sym_gasvalve_off[] = {
   B00000,
   B01110,
   B01000,
@@ -112,9 +111,8 @@ byte sym_gasvalve_off[] = {
   B01110,
   B00000
 };
-byte sym_gasvalve_on[] = invert(sym_gasvalve_off);
 
-byte sym_flame_off[] = {
+PROGMEM byte sym_flame_off[] = {
   B00000,
   B01110,
   B01000,
@@ -124,9 +122,8 @@ byte sym_flame_off[] = {
   B01000,
   B00000
 };
-byte sym_flame_on[] = invert(sym_flame_off);
 
-byte sym_alarm_off[] = {
+PROGMEM byte sym_alarm_off[] = {
   B00000,
   B01110,
   B01010,
@@ -136,5 +133,4 @@ byte sym_alarm_off[] = {
   B01010,
   B00000
 };
-byte sym_alarm_on[] = invert(sym_alarm_off);
 
