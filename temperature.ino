@@ -1,6 +1,6 @@
 #include <OneWire.h>
 
-OneWire temp_sensor(PIN_TEMP_SENS);  // on pin 10
+OneWire temp_sensor(PIN_TEMP_SENS);
 
 byte temp_sensor_addr[8] = {0};
 boolean temp_sensor_found = false;
