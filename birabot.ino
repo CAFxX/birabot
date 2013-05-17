@@ -7,14 +7,12 @@
 #include "uxmgr.h"
 
 void setup() {
-  noInterrupts();
   setup_pins();
   setup_random();
   setup_display();
   setup_keypad();
   setup_fs();
   setup_temperature();
-  interrupts();
   setup_safety();
   resume();
 }
@@ -40,6 +38,8 @@ static void resume() {
 }
 
 void loop() {
+  check_temperature();
+  poll_keypad();
   uxmgr::get().draw();
 }
 

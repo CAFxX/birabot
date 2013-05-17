@@ -65,6 +65,8 @@ static void reset() {
   wdt_reset(); // wait other 250ms before resetting
   write_output_pins();
   watchdog_expire = true;
+  while (true)
+    ;
 }
 
 static void flame(boolean on) {

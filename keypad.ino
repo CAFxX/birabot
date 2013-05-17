@@ -32,12 +32,16 @@ PROGMEM const byte alphakeys_idx[] = {
 
 Keypad keypad( makeKeymap(keys), rowPins, colPins, rows, cols );
 
-void keypadEvent(char key) {
+void keypad_event_handler(KeypadEvent key) {
   if (keypad.getState() == PRESSED) {
     uxmgr::get().on_key(key);
   }
 }
 
 static void setup_keypad() {
-  keypad.addEventListener(keypadEvent);  
+  keypad.addEventListener(keypad_event_handler);  
+}
+
+static void poll_keypad() {
+  keypad.getKeys();
 }

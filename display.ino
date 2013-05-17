@@ -6,7 +6,7 @@
   strcpy_P(__buf__, PSTR(data));             
 
 #define __blob_PGM(blobname, size)          \
-  char __buf__[size];                       \
+  byte __buf__[size];                       \
   memcpy_P(__buf__, blobname, size);         
 
 #define printAt(x, y, data) {               \
@@ -15,7 +15,7 @@
 }
 
 #define printAt_P(x, y, data) {             \
-  string_PGM(data);                         \
+  __string_PGM(data);                       \
   printAt(x, y, __buf__);                   \
 }
 
@@ -37,7 +37,7 @@
 }
 
 #define printfAt_P(x, y, fmt, ...) {        \
-  string_PGM(fmt);                          \
+  __string_PGM(fmt);                        \
   printfAt(x, y, __buf__, __VA_ARGS__);     \
 }
 
@@ -47,7 +47,7 @@
 }
 
 #define lcdCreateCharPGM(id, data, invert) {\
-  __blob_PGM(id, 8);                        \
+  __blob_PGM(data, 8);                        \
   if (invert) {                             \
     lcd_char_invert(__buf__);               \
   }                                         \
@@ -274,7 +274,7 @@ class program_progress : public ux {
   
     // first line
     printfAt_P(0, 0, "%02d°\x7e%02d°    %c %c %c", 
-      get_temperature(), temperature_at(prg, s/60), 
+      get_temperature(), get_temperature_target(), 
       ignition_on() ? 1 : 0, 
       gasvalve_on() ? 3 : 2, 
       flame_on() ? 5 : 4);
@@ -324,7 +324,7 @@ class manual_control : public ux {
   void draw() {
     // first line
     printfAt_P(0, 0, "%02d°\x7e%02d°    %c %c %c", 
-      get_temperature(), temp_set(), 
+      get_temperature(), get_temperature_target(), 
       ignition_on() ? 1 : 0, 
       gasvalve_on() ? 3 : 2, 
       flame_on() ? 5 : 4);
@@ -350,11 +350,11 @@ class manual_control : public ux {
         break;
       case '#':
         temp_valid = true;
-        // TODO: send the new temp to the engine
+        set_temperature_target(temp_set);
         break;
       case '*': 
         if (temp_valid) {
-          // TODO: send temp=0 to the engine
+          set_temperature_target(0);
           back(); 
         } else {
           temp_valid = true;
@@ -508,7 +508,6 @@ class reset_confirm : public ux {
   void do_reset() {
     fs.format();
     reset();
-    while (true);
   }
 };
 

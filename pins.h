@@ -37,3 +37,5 @@
 // Alarm pin
 #define PIN_ALARM A3
 
+// Led pin
+#define PIN_LED 13
