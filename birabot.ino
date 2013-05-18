@@ -6,11 +6,19 @@
 #include "microfs.h"
 #include "uxmgr.h"
 
+static int setup_panic(int panic_code=0, boolean fail_condition=true) {
+  static int __setup_panic = 0;
+  if (!__setup_panic && fail_condition && panic_code) {
+    __setup_panic = panic_code;
+  }
+  return __setup_panic;
+}
+
 void setup() {
   setup_pins();
-  setup_random();
   setup_display();
   setup_keypad();
+  setup_random();
   setup_fs();
   setup_temperature();
   setup_safety();
@@ -38,7 +46,9 @@ static void resume() {
 }
 
 void loop() {
+  // fetch the temperature sensor
   check_temperature();
+  // scan the keypad
   poll_keypad();
   uxmgr::get().draw();
 }

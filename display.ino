@@ -1,5 +1,8 @@
 #include "pins.h"
 #include "custom_chars.h"
+#include "Program.h"
+
+LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_ENABLE, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN_LCD_D7);
 
 #define __string_PGM(data)                  \
   char __buf__[sizeof(data)];               \
@@ -9,9 +12,14 @@
   byte __buf__[size];                       \
   memcpy_P(__buf__, blobname, size);         
 
-#define printAt(x, y, data) {               \
-  lcd.setCursor((x), (y));                  \
-  lcd.print(data);                          \
+static void printAt(byte x, byte y, char *data) {
+  lcd.setCursor(x, y);
+  lcd.print(data);
+}
+
+static void writeAt(byte x, byte y, byte data) {
+  lcd.setCursor(x, y);
+  lcd.write(data);
 }
 
 #define printAt_P(x, y, data) {             \
@@ -29,11 +37,14 @@
   printAt_P(0, 1, line1);                   \
 }
 
-#define printfAt(x, y, fmt, ...) {          \
-  const int max_len = 17;                   \
-  char buf[max_len] = {0};                  \
-  snprintf(buf, max_len, fmt, __VA_ARGS__); \
-  printAt(x, y, buf);                       \
+static void printfAt(byte x, byte y, char *fmt, ...) {          
+  const int max_len = 17;                   
+  char buf[max_len];        
+  va_list args;
+  va_start(args, fmt);  
+  vsnprintf(buf, max_len, fmt, args); 
+  va_end(args);
+  printAt(x, y, buf);                       
 }
 
 #define printfAt_P(x, y, fmt, ...) {        \
@@ -41,17 +52,14 @@
   printfAt(x, y, __buf__, __VA_ARGS__);     \
 }
 
-#define writeAt(x, y, b) {                  \
-  lcd.setCursor((x), (y));                  \
-  lcd.write((byte)b);                       \
+static void __lcdCreateCharPGM(byte id, byte *data, boolean invert) {
+  if (invert) lcd_char_invert(data);
+  lcd.createChar(id, data);
 }
 
 #define lcdCreateCharPGM(id, data, invert) {\
-  __blob_PGM(data, 8);                        \
-  if (invert) {                             \
-    lcd_char_invert(__buf__);               \
-  }                                         \
-  lcd.createChar(id, __buf__);              \
+  __blob_PGM(data, 8);                      \
+  __lcdCreateCharPGM(id, __buf__, invert);  \
 }
 
 class main_menu;
@@ -66,8 +74,6 @@ class manual_control;
 class reset_confirm;
 class splash_screen;
 class microfs_tool;
-
-LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_ENABLE, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN_LCD_D7);
 
 static void setup_display() {
   lcd.begin(16, 2);
@@ -94,17 +100,21 @@ class splash_screen : public ux {
     lcdCreateCharPGM(7, logo13, false);  
   }
   void draw() {
-    printAt_P(5, 0, "BIRABOT");
-    printAt_P(5, 1, __DATE__);
-    // draw the logo
-    writeAt(0, 0, 0);
-    writeAt(1, 0, 1);
-    writeAt(2, 0, 2);
-    writeAt(3, 0, 3);
-    writeAt(0, 1, 4);
-    writeAt(1, 1, 5);
-    writeAt(2, 1, 6);
-    writeAt(3, 1, 7);
+    if (setup_panic()) {
+      printfAt_P(0, 0, "PANIC %5u", setup_panic());
+    } else {
+      printAt_P(5, 0, "BIRABOT");
+      printAt_P(5, 1, __DATE__);
+      // draw the logo
+      writeAt(0, 0, 0);
+      writeAt(1, 0, 1);
+      writeAt(2, 0, 2);
+      writeAt(3, 0, 3);
+      writeAt(0, 1, 4);
+      writeAt(1, 1, 5);
+      writeAt(2, 1, 6);
+      writeAt(3, 1, 7);
+    }
   }
   void on_key(char) {
     show<main_menu>();
@@ -160,23 +170,22 @@ class program_abort : public ux {
 class program_list : public ux {
   byte file_id;
   bool typing;
+  Program prg;
   public:
   program_list() {
-    file_id = 0;
+    prg = file_id = 0;
     typing = false;
   }
   void draw() {
-    program *prg;
-    printfAt_P(0, 0, "%03d %08s %03d", 
-      file_id, program_name(prg), program_duration);
+    printfAt_P(0, 0, "%03d %08s %03d", file_id, "", prg.duration());
     printAt_P(0, 1, "*-Back    Menu-#");
   }
   void on_key(char key) {
     switch (key) {
-      case 'A': typing = false; file_id--; break;
-      case 'B': typing = false; file_id -= 10; break;
-      case 'C': typing = false; file_id += 10; break;
-      case 'D': typing = false; file_id++; break;
+      case 'A': typing = false; prg = file_id -=  1; break;
+      case 'B': typing = false; prg = file_id -= 10; break;
+      case 'C': typing = false; prg = file_id += 10; break;
+      case 'D': typing = false; prg = file_id +=  1; break;
       case '0': case '1': case '2': case '3': case '4': 
       case '5': case '6': case '7': case '8': case '9': {
         int new_file_id;
@@ -270,8 +279,7 @@ class program_progress : public ux {
   }
   void draw() {
     int s = 725;
-    program *prg;
-  
+
     // first line
     printfAt_P(0, 0, "%02d°\x7e%02d°    %c %c %c", 
       get_temperature(), get_temperature_target(), 
@@ -281,7 +289,7 @@ class program_progress : public ux {
     
     // second line
     printfAt_P(0, 1, "%8s %03d+03d", 
-      program_name(prg), s/60, s%60);
+      "", s/60, s%60);
   }
   
   void on_key(char key) {
@@ -386,7 +394,7 @@ class program_setup : public ux {
   byte field;
   byte row;
   byte rows;
-  program *prg;
+  Program prg;
   
   ux_input_numeric<2, 1> type_mode;
   ux_input_numeric<256, 100> type_duration;
@@ -397,11 +405,11 @@ class program_setup : public ux {
     row = 0;
     rows = 0;
     field = 0;
-    file_id = 0;
-    prg = NULL;
+    prg = file_id = 0;
   }
   void on_init(int param) {
-    file_id = param;
+    prg = file_id = param;
+    rows = prg.steps();
   }
   void draw() {
     byte file_id, cur_step, num_steps, step_duration, step_temperature, step_mode;
@@ -409,7 +417,7 @@ class program_setup : public ux {
     
     // first line
     printfAt_P(0, 0, "%03d %08s %03d", 
-      file_id, program_name(prg), program_duration);
+      file_id, "", program_duration);
     
     // second line
     printfAt_P(0, 1, "%02d/%02d   %c %03d %02d", 
@@ -426,9 +434,9 @@ class program_setup : public ux {
     switch (key) {
       case 'A':
         row = ( row - 1 + rows+1 ) % ( rows+1 );
-        type_mode = get_step_type(prg, row);
-        type_duration = get_step_duration(prg, row);
-        type_temp = get_step_temperature(prg, row); 
+        type_mode = prg.getMethod(row);
+        type_duration = prg.getDuration(row);
+        type_temp = prg.getTemperature(row); 
         break;
       case 'B':
         field = ( field - 1 + 3 ) % 3;
@@ -438,24 +446,24 @@ class program_setup : public ux {
         break;
       case 'D':
         row = ( row + 1 + rows+1 ) % ( rows+1 );
-        type_mode = get_step_type(prg, row);
-        type_duration = get_step_duration(prg, row);
-        type_temp = get_step_temperature(prg, row); 
+        type_mode = prg.getMethod(row);
+        type_duration = prg.getDuration(row);
+        type_temp = prg.getTemperature(row); 
         break;
       case '0': case '1': case '2': case '3': case '4': 
       case '5': case '6': case '7': case '8': case '9': 
         switch (field) {
           case 0: 
             type_mode.on_key(key); 
-            set_step_type(prg, row, type_mode()); 
+            prg.setMethod(row, type_mode()); 
             break;
           case 1: 
             type_duration.on_key(key); 
-            set_step_duration(prg, row, type_duration()); 
+            prg.setDuration(row, type_duration()); 
             break;
           case 2: 
             type_temp.on_key(key); 
-            set_step_temperature(prg, row, type_temp()); 
+            prg.setTemperature(row, type_temp()); 
             break;
         }
         break;
@@ -464,7 +472,7 @@ class program_setup : public ux {
   }
   void on_back(int retVal) {
     if (retVal) {
-      // TODO: save changes
+      prg.saveChanges();
     }
     back();
   }

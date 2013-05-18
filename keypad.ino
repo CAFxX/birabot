@@ -33,7 +33,7 @@ PROGMEM const byte alphakeys_idx[] = {
 Keypad keypad( makeKeymap(keys), rowPins, colPins, rows, cols );
 
 void keypad_event_handler(KeypadEvent key) {
-  if (keypad.getState() == PRESSED) {
+  if (keypad.isPressed(key)) {
     uxmgr::get().on_key(key);
   }
 }
