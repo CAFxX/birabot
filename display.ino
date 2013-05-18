@@ -200,7 +200,7 @@ class program_list : public ux {
         if (new_file_id > 255) {
           new_file_id %= 100;
         }
-        file_id = new_file_id;
+        prg = file_id = new_file_id;
         break;
       }
       case '#': back(file_id); break;
@@ -412,12 +412,9 @@ class program_setup : public ux {
     rows = prg.steps();
   }
   void draw() {
-    byte file_id, cur_step, num_steps, step_duration, step_temperature, step_mode;
-    int program_duration;
-    
     // first line
     printfAt_P(0, 0, "%03d %08s %03d", 
-      file_id, "", program_duration);
+      file_id, "", prg.duration());
     
     // second line
     printfAt_P(0, 1, "%02d/%02d   %c %03d %02d", 

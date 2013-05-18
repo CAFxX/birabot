@@ -34,8 +34,12 @@ class Program {
   
   bool alloc(byte size) {
     byte *newptr = (byte*)realloc(ptr, size);
-    this->size = size;
-    ptr = newptr;
+    if (newptr != NULL) {
+      this->size = size;
+      ptr = newptr;
+      return true;
+    }
+    return false;
   }
   
   bool saveChanges() {
@@ -65,11 +69,14 @@ class Program {
       return false;
     if (pos > steps())
       return false;
-    alloc(size+2);
+    if (alloc(size+2) == false) {
+      return false;
+    }
     for (int i=steps()-1; i>pos; i--) {
       getStep(i) = getStep(i-1);
     }
     getStep(pos) = Step();
+    return true;
   }
   
   bool delStep(byte pos) {
@@ -80,7 +87,7 @@ class Program {
     for (int i=pos+1; i<steps(); i++) {
       getStep(i-1) = getStep(i);
     }
-    alloc(size-2);
+    return alloc(size-2);
   }
   
   bool addStep() {
@@ -119,18 +126,39 @@ class Program {
     getStep(pos).constant = !!method;
   }
   
+  byte getStepAt(int minute) {
+    for (int i=0, minutes=0; i<steps(); i++) {
+      int stepDuration = getDuration(i);
+      if (minute < minutes + stepDuration) {
+        return i;
+      }
+      minutes += stepDuration;
+    }
+    return 0; // FIXME
+  }
+  
   byte getTemperatureAt(int minute) {
     if (minute >= duration() || minute < 0) {
       return 0;
     }
-    int minutes = 0;
-    byte prevTemp = 0;
-    for (int i=0; i<steps() && minutes<minute; i++) {
-      minutes += getDuration(i);
-      prevTemp = getTemperature(i);
+    byte stepIndex = getStepAt(minute);
+    if (getMethod(stepIndex) == 0) {
+      byte t1 = stepIndex == 0 ? 0 : getTemperature(stepIndex-1);
+      int stepMinute = minute;
+      for (int i = 0; i < stepIndex; i++) {
+        stepMinute -= getDuration(i);
+      }
+      return interpolate(t1, getTemperature(stepIndex), stepMinute, getDuration(stepIndex));
+    } else {
+      return getTemperature(stepIndex);
     }
-    return minutes;
-
+  }
+  
+  static byte interpolate(byte t1, byte t2, int minute, int duration) {
+    float dt = ((float)t2) - ((float)t1);
+    float progress = ((float)minute) / ((float)duration);
+    float t = ((float)t1) + dt * progress;
+    return t;
   }
   
 };
