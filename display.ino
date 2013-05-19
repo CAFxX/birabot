@@ -1,66 +1,10 @@
 #include "pins.h"
 #include "custom_chars.h"
 #include "Program.h"
+#include "panic.h"
+#include "display_utils.h"
 
 LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_ENABLE, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN_LCD_D7);
-
-#define __string_PGM(data)                  \
-  char __buf__[sizeof(data)];               \
-  strcpy_P(__buf__, PSTR(data));             
-
-#define __blob_PGM(blobname, size)          \
-  byte __buf__[size];                       \
-  memcpy_P(__buf__, blobname, size);         
-
-static void printAt(byte x, byte y, char *data) {
-  lcd.setCursor(x, y);
-  lcd.print(data);
-}
-
-static void writeAt(byte x, byte y, byte data) {
-  lcd.setCursor(x, y);
-  lcd.write(data);
-}
-
-#define printAt_P(x, y, data) {             \
-  __string_PGM(data);                       \
-  printAt(x, y, __buf__);                   \
-}
-
-#define printScreen(line0, line1) {         \
-  printAt(0, 0, line0);                     \
-  printAt(0, 1, line1);                     \
-}
-
-#define printScreen_P(line0, line1) {       \
-  printAt_P(0, 0, line0);                   \
-  printAt_P(0, 1, line1);                   \
-}
-
-static void printfAt(byte x, byte y, char *fmt, ...) {          
-  const int max_len = 17;                   
-  char buf[max_len];        
-  va_list args;
-  va_start(args, fmt);  
-  vsnprintf(buf, max_len, fmt, args); 
-  va_end(args);
-  printAt(x, y, buf);                       
-}
-
-#define printfAt_P(x, y, fmt, ...) {        \
-  __string_PGM(fmt);                        \
-  printfAt(x, y, __buf__, __VA_ARGS__);     \
-}
-
-static void __lcdCreateCharPGM(byte id, byte *data, boolean invert) {
-  if (invert) lcd_char_invert(data);
-  lcd.createChar(id, data);
-}
-
-#define lcdCreateCharPGM(id, data, invert) {\
-  __blob_PGM(data, 8);                      \
-  __lcdCreateCharPGM(id, __buf__, invert);  \
-}
 
 class main_menu;
 class program_abort;
@@ -100,21 +44,17 @@ class splash_screen : public ux {
     lcdCreateCharPGM(7, logo13, false);  
   }
   void draw() {
-    if (setup_panic()) {
-      printfAt_P(0, 0, "PANIC %5u", setup_panic());
-    } else {
-      printAt_P(5, 0, "BIRABOT");
-      printAt_P(5, 1, __DATE__);
-      // draw the logo
-      writeAt(0, 0, 0);
-      writeAt(1, 0, 1);
-      writeAt(2, 0, 2);
-      writeAt(3, 0, 3);
-      writeAt(0, 1, 4);
-      writeAt(1, 1, 5);
-      writeAt(2, 1, 6);
-      writeAt(3, 1, 7);
-    }
+    printAt_P(5, 0, "BIRABOT");
+    printAt_P(5, 1, __DATE__);
+    // draw the logo
+    writeAt(0, 0, 0);
+    writeAt(1, 0, 1);
+    writeAt(2, 0, 2);
+    writeAt(3, 0, 3);
+    writeAt(0, 1, 4);
+    writeAt(1, 1, 5);
+    writeAt(2, 1, 6);
+    writeAt(3, 1, 7);
   }
   void on_key(char) {
     show<main_menu>();
@@ -178,7 +118,7 @@ class program_list : public ux {
   }
   void draw() {
     printfAt_P(0, 0, "%03d %08s %03d", file_id, "", prg.duration());
-    printAt_P(0, 1, "*-Back    Menu-#");
+    printAt_P(0, 1, "*-Back  Select-#");
   }
   void on_key(char key) {
     switch (key) {
@@ -188,18 +128,9 @@ class program_list : public ux {
       case 'D': typing = false; prg = file_id +=  1; break;
       case '0': case '1': case '2': case '3': case '4': 
       case '5': case '6': case '7': case '8': case '9': {
-        int new_file_id;
-        if (!typing) {
-          new_file_id = 0;
-          typing = true;
-        } else {
-          new_file_id = file_id;
-          new_file_id *= 10;
-        }
-        new_file_id += key - '0';
-        if (new_file_id > 255) {
-          new_file_id %= 100;
-        }
+        ux_input_numeric<256, 100> new_file_id = typing ? file_id : 0;
+        typing = true;
+        new_file_id.on_key(key);
         prg = file_id = new_file_id;
         break;
       }

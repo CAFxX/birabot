@@ -12,22 +12,15 @@ static void setup_temperature() {
   temp_sensor_found = temp_sensor.search(temp_sensor_addr);
   if (!temp_sensor_found) {
     // no onewire device found
-    temp_sensor.reset_search();
-    setup_panic(2);
+    __HALT__("T sensor not found");
   }
   if (!check_CRC(temp_sensor_addr, 8)) {
     // crc validation error
-    temp_sensor_found = false;
-    temp_sensor.reset_search();
-    setup_panic(3);
-    return;
+    __HALT__("T sensor CRC err");
   }
   if (temp_sensor_addr[0] != 0x20) {
     // not a temperature sensor
-    temp_sensor_found = false;
-    temp_sensor.reset_search();
-    setup_panic(4);
-    return;
+    __HALT__("T sensor unknown");
   }
   // configure the sensor
   temp_sensor.reset();
@@ -39,19 +32,8 @@ static void setup_temperature() {
   temp_sensor.reset();
 }
 
-// given a high byte and low byte, build a int16_t out of them
-static int16_t b2i16(byte low, byte high) {
-  int16_t val = (int8_t)high;
-  return (val << 8) | low;
-}
-
-// check that the contents of the buffer are valid according to 
-// the embedded CRC8
-static boolean check_CRC(byte* data, int len) {
-  return OneWire::crc8(data, len-1) == data[len-1];
-}
-
-static void refresh_temperature() {
+// asynchronously fetch the temperature
+static void poll_temperature() {
   static boolean reqPending = false;
   static int reqTime = 0;
   int curTime = millis();
@@ -65,6 +47,18 @@ static void refresh_temperature() {
     reqTime = curTime;
     reqPending = true;
   }
+}
+
+// given a high byte and low byte, build a int16_t out of them
+static int16_t b2i16(byte low, byte high) {
+  int16_t val = (int8_t)high;
+  return (val << 8) | low;
+}
+
+// check that the contents of the buffer are valid according to 
+// the embedded CRC8
+static boolean check_CRC(byte* data, int len) {
+  return OneWire::crc8(data, len-1) == data[len-1];
 }
 
 static void request_sample() {

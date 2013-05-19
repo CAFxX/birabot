@@ -1,3 +1,6 @@
+#ifndef UXMGR
+#define UXMGR
+
 #include <stddef.h>
 
 class ux {
@@ -131,3 +134,5 @@ template <class T> void ux::next() {
 template <class T> void ux::next(int param) {
   uxmgr::get().show<T>(this, param);
 }
+
+#endif // UXMGR

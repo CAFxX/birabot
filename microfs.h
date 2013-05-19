@@ -37,7 +37,7 @@
   TODO:
   - files can't be changed in size (extend in place, copy-and-extend)
   - free space defragmentation
-  - 
+  - full crash-proofing
 */
 
 #ifndef MICROFS
@@ -54,7 +54,7 @@ static byte eeprom_read(size_t pos) {
 static bool eeprom_update(size_t pos, byte val, bool check_after_write = true) {
   if (pos < 0 || pos > E2END)
     return false;
-  /* the avr/eeprom.h for arduino appears to lack eeprom_update_byte
+  /* the avr/eeprom.h for arduino appears to lack eeprom_update_byte:
      since reading from EEPROM appears to be way faster than writing 
      always check if by chance the current position already holds the
      correct value: if this is the case, simply return success immediately */
@@ -328,12 +328,13 @@ class microfs {
     }
     // actually write to disk the changes
     // FIXME: proceed backwards
-    /* CRITICAL SECTION */ {
+    /* CRITICAL SECTION */ 
+    {
       while (new_size > 255) {
         new_pos += write_header(new_pos, microfsfile(0, 255), false).stride();
         new_size -= 255;
       }
-      write_header(new_pos, microfsfile(0, new_size));
+      write_header(new_pos, microfsfile(0, new_size), false);
     }
     return true;
   }
@@ -434,7 +435,8 @@ class microfs {
   microfsfile write_header(size_t pos, microfsfile f, boolean backward=true) {
     if (pos < 0 || pos+2 > size)
       return f;
-    /* CRITICAL SECTION */ {
+    /* CRITICAL SECTION */ 
+    {
       if (backward) {
         eeprom_update(pos+1, f.size);
         eeprom_update(pos+0, f.id);

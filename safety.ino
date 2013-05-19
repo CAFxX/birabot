@@ -17,29 +17,30 @@ volatile boolean flame_required = false;
 static void safety_control() {
   // the valve safety is "normally closed"
   safety_gasvalve_on = false;
-  // check if the flame needs to be on
-  if (flame_required) {
-    // check if we are in the ignition phase
-    if (ignition_on()) {
-      // we are in the ignition phase
-      safety_gasvalve_on = true;
-      safety_ignition_override++;
-    } else if (flame_on()) {
-      // normal phase
-      safety_gasvalve_on = true;
-      safety_ignition_override = 255;
-    } else {
-      // the flame is required but we are not in the ignition phase, or in the normal phase
-      // i.e. either we could not ignite the flame, or the flame died for some other reason (wind?)
-      // TODO: if we just tried igniting, wait for a bit and then retry (a couple of times); 
-      // if the flame was on, retry immediately, then wait and retry (a couple of times)
-    }
-  }
-  // set the ignition and gas valve output pins as decided above
-  write_output_pins();
-  // finally, prevent the watchdog (250ms) from resetting the arduino
-  // unless the watchdog_expire flag has been set
+  // if a reset is pending everything must be off
   if (watchdog_expire == false) {
+    // check if the flame needs to be on
+    if (flame_required) {
+      // check if we are in the ignition phase
+      if (ignition_on()) {
+        // we are in the ignition phase
+        safety_gasvalve_on = true;
+        safety_ignition_override++;
+      } else if (flame_on()) {
+        // normal phase
+        safety_gasvalve_on = true;
+        safety_ignition_override = 255;
+      } else {
+        // the flame is required but we are not in the ignition phase, or in the normal phase
+        // i.e. either we could not ignite the flame, or the flame died for some other reason (wind?)
+        // TODO: if we just tried igniting, wait for a bit and then retry (a couple of times); 
+        // if the flame was on, retry immediately, then wait and retry (a couple of times)
+      }
+    }
+    // set the ignition and gas valve output pins as decided above
+    write_output_pins();
+    // finally, prevent the watchdog (250ms) from resetting the arduino
+    // unless the watchdog_expire flag has been set
     wdt_reset();
   }
 }
@@ -56,14 +57,20 @@ static boolean safety_control_ignition_override() {
   return true;
 }
 
-static void reset() {
-  if (watchdog_expire) {
-    return;
-  }
+// this is an emergency procedure that shuts off all "dangerous" activities
+// note that it won't prevent other code from restarting such activities!
+static void handle_panic() {
   safety_gasvalve_on = false; // shut off the gas valve
   safety_ignition_override = 255; // stop ignition
-  wdt_reset(); // wait other 250ms before resetting
   write_output_pins();
+}
+
+// this function resets the birabot
+// note that control never returns from this function!
+static void reset() {
+  handle_panic();
+  wdt_disable();
+  wdt_enable(WDTO_15MS);
   watchdog_expire = true;
   while (true)
     ;
@@ -93,11 +100,16 @@ static boolean flame_on() {
   return flame_level > flame_level_threshold;
 }
 
+static void set_flame_level(byte level) {
+  flame_level = level;
+}
+
 static void setup_safety() {
+  wdt_disable();
+  wdt_enable(WDTO_250MS);
   // the safety_control routine is called every 50ms
   FlexiTimer2::set(safety_control_interval, safety_control);
   FlexiTimer2::start();
-  // the watchdog is set to 250ms and is reset only in the safety_control
-  wdt_enable(WDTO_250MS);
 }
+
 
