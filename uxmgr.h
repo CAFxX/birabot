@@ -119,6 +119,16 @@ class uxmgr {
   void show(int param) {
     show<T>(NULL, param);
   }
+  
+  template <class T>
+  void next() {
+    show<T>(curr);
+  }
+
+  template <class T>
+  void next(int param) {
+    show<T>(curr, param);
+  }
 
   void back(int retVal=0, bool withRetVal=false) {
     __string_PGM("back");

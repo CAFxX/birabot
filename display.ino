@@ -105,6 +105,8 @@ class program_abort : public ux {
   
   void do_program_abort() {
     // TODO
+    set_temperature_target(0);
+    fs.remove(1);
   }
   
 };
@@ -255,9 +257,10 @@ class program_menu : public ux {
 class program_progress : public ux {
   int s;
   Program *prg;
-  time_t start;
+  time_t start_t;
+  time_t resume_t;
   public:
-  program_progress() : s(0), prg(NULL), start(now()) {
+  program_progress() : s(0), prg(NULL), start_t(now()), resume_t(0) {
   }
   ~program_progress() {
     delete prg;
@@ -274,16 +277,25 @@ class program_progress : public ux {
   }
   void on_init(int param) {
     prg = new Program(param);
+    byte __resume_file_id = resume_file_id();
+    if (__resume_file_id == prg->id()) {
+      int seconds = resume_seconds();
+      start_t -= seconds;
+    }
   }
   void draw() {
-    int s = now() - start;
+    time_t s = now() - start_t;
+    if (now() - resume_t > 15) {
+      resume_save(prg->id(), s);
+      resume_t = now();
+    }
     
     set_temperature_target(prg->getTemperatureAt(s/60));
 
     // first line
     printfAt_P(0, 0, "%02d\xdf\x7e%02d\xdf  ", 
       get_temperature(), get_temperature_target());
-    writeAt( 9, 0, false ? 7 : 6);
+    writeAt( 9, 0, alarm_on() ? 7 : 6);
     writeAt(10, 0, ' '); 
     writeAt(11, 0, ignition_on() ? 1 : 0);
     writeAt(12, 0, ' '); 
@@ -298,7 +310,9 @@ class program_progress : public ux {
   
   void on_key(char key) {
     switch (key) {
-      case '*': next<program_abort>(); break;
+      case '*': 
+        next<program_abort>(); 
+        break;
     }
   }
   
@@ -322,6 +336,7 @@ class manual_control : public ux {
   manual_control() {
     temp_set = 0;
     temp_valid = true;
+    set_temperature_target(temp_set());
   }
 
   void on_show() {
@@ -339,13 +354,13 @@ class manual_control : public ux {
     // first line
     printfAt_P(0, 0, "%02d\xdf\x7e%02d\xdf  ", 
       get_temperature(), temp_set());
-    writeAt( 9, 0, false ? 7 : 6);
+    writeAt( 9, 0, alarm_on() ? 7 : 6);
     writeAt(10, 0, ' '); 
-    writeAt(11, 0, !ignition_on() ? 1 : 0);
+    writeAt(11, 0, ignition_on() ? 1 : 0);
     writeAt(12, 0, ' '); 
-    writeAt(13, 0, !gasvalve_on() ? 3 : 2); 
+    writeAt(13, 0, gasvalve_on() ? 3 : 2); 
     writeAt(14, 0, ' '); 
-    writeAt(15, 0, !flame_on() ? 5 : 4); 
+    writeAt(15, 0, flame_on() ? 5 : 4); 
     
     if (temp_valid) {
       printAt_P(0, 1, "*-Stop  Temp-0-9");
@@ -368,7 +383,7 @@ class manual_control : public ux {
         break;
       case '#':
         temp_valid = true;
-        set_temperature_target(temp_set);
+        set_temperature_target(temp_set());
         break;
       case '*': 
         if (temp_valid) {

@@ -43,25 +43,7 @@ void setup() {
   //setup_temperature();
   setup_flame_sensor();
   setup_safety();
-  //resume();
-}
-
-size_t seconds = 0;
-
-static void resume() {
-  microfsfile resumefile = fs.open(1);
-  if (!resumefile.is_valid() || resumefile.get_size() != 3) {
-    fs.remove(1);
-    return;
-  }
-  byte buf[3] = {0};
-  resumefile.read_bytes(0, buf, sizeof(buf));
-  microfsfile programfile = fs.open(buf[0]);
-  if (!programfile.is_valid()) {
-    fs.remove(1);
-    return;
-  }
-  seconds = *(size_t*)(buf+1);
+  resume();
 }
 
 void loop() {

@@ -7,12 +7,19 @@ byte flame_level_threshold = 255;
 byte safety_ignition_override_threshold = 60; // 60*50ms = 3s
 // safety_control will be run each safety_control_interval ms
 int safety_control_interval = 50; // ms
+// distance between ignition attempts (multiplied by safety_control_interval)
+int safety_ignition_distance_threshold = 300; // 300*50ms = 15s
+// maximum number of attempts before panic
+byte safety_ignition_attempts_threshold = 3;
 
 volatile boolean safety_gasvalve_on = false;
 volatile byte flame_level = 0;
 volatile byte safety_ignition_override = 255;
+volatile int safety_ignition_distance = 0;
+volatile byte safety_ignition_attempts = 0;
 volatile boolean watchdog_expire = false;
 volatile boolean flame_required = false;
+volatile boolean safety_alarm = false;
 
 static void safety_control() {
   // the valve safety is "normally closed"
@@ -26,15 +33,27 @@ static void safety_control() {
         // we are in the ignition phase
         safety_gasvalve_on = true;
         safety_ignition_override++;
+        safety_ignition_distance = 0;
       } else if (flame_on()) {
         // normal phase
         safety_gasvalve_on = true;
         safety_ignition_override = 255;
+        safety_ignition_distance = 0;
       } else {
         // the flame is required but we are not in the ignition phase, or in the normal phase
         // i.e. either we could not ignite the flame, or the flame died for some other reason (wind?)
         // TODO: if we just tried igniting, wait for a bit and then retry (a couple of times); 
         // if the flame was on, retry immediately, then wait and retry (a couple of times)
+        safety_ignition_distance++;
+        if (safety_ignition_distance >= safety_ignition_distance_threshold && safety_ignition_attempts < safety_ignition_attempts_threshold) {
+          safety_ignition_attempts++;
+          safety_ignition_override = 0;
+        } else if (safety_ignition_attempts >= safety_ignition_attempts_threshold) {
+          handle_panic();
+          safety_alarm = true;
+        } else {
+          // just wait...
+        }
       }
     }
     // set the ignition and gas valve output pins as decided above
@@ -98,6 +117,10 @@ static boolean ignition_on() {
 
 static boolean flame_on() {
   return flame_level > flame_level_threshold;
+}
+
+static boolean alarm_on() {
+  return safety_alarm;
 }
 
 static void set_flame_level(byte level) {
