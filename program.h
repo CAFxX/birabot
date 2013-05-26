@@ -1,3 +1,4 @@
+#include "panic.h"
 
 class Step {
   public:
@@ -14,22 +15,49 @@ class Program {
   byte size;
   
   public:
-  Program(byte file_id=0) {
-    this->file_id = file_id;
-    ptr = NULL;
-    size = 0;
+  Program(byte file_id=0) : file_id(file_id), ptr(NULL), size(0) {
+    Serial.print(F("Program "));
+    Serial.println(file_id);
     microfsfile f = fs.open(file_id);
-    if (f.is_valid()) {
+    if (f.is_valid() && file_id != 0) {
+      Serial.println(F("loading program"));
+      Serial.println(f.get_size());
       alloc(f.get_size());
-      f.read_bytes(0, ptr, f.get_size());
+      byte read = f.read_bytes(0, ptr, f.get_size());
+      if (read != f.get_size()) {
+        Serial.println(F("error reading program"));
+        Serial.println(read);
+      }
+      for (int i=0; i<steps(); i++) {
+        Serial.println(i);
+        Serial.println(getMethod(i));
+        Serial.println(getDuration(i));
+        Serial.println(getTemperature(i));
+      }
     }
   }
   
+  Program(const Program& other) : file_id(other.file_id) {
+    alloc(other.size);
+    memcpy(ptr, other.ptr, size);
+  }
+  
   ~Program() {
+    Serial.print(F("~Program "));
+    Serial.println(file_id);
     if (ptr != NULL) {
       free(ptr);
       ptr = NULL;
     }
+  }
+  
+  bool is_valid() {
+    microfsfile f = fs.open(file_id);
+    return f.is_valid() && file_id != 0;
+  }
+  
+  byte id() {
+    return file_id;
   }
   
   bool alloc(byte size) {
@@ -39,16 +67,31 @@ class Program {
       ptr = newptr;
       return true;
     }
+    Serial.println(F("alloc() fail"));
     return false;
   }
   
   bool saveChanges() {
+    Serial.println(F("saveChanges"));
+    Serial.println(file_id);
+    Serial.println(size);
     fs.remove(file_id);
+    Serial.println(F("saveChanges-create"));
     microfsfile f = fs.create(size, file_id);
     if (!f.is_valid()) {
+      Serial.println(F("could not create file"));
       return false;
     }
-    f.write_bytes(0, ptr, size);
+    Serial.println(f.get_id());
+    Serial.println(f.get_size());
+    Serial.println(f.get_offset());
+    Serial.println(F("saveChanges-write"));
+    byte len = f.write_bytes(0, ptr, size);
+    if (len != size) {
+      Serial.println(F("error writing file"));
+      Serial.println(len);
+      Serial.println(size);
+    }
     return true;
   }
   
@@ -99,7 +142,12 @@ class Program {
   }
   
   Step& getStep(byte pos) {
-    return *(Step*)(void*)(ptr+pos*2);
+    if (pos >= steps()) {
+      Serial.println("pos >= steps()");
+      Serial.println(pos);
+      Serial.println(steps());
+    }
+    return ((Step*)ptr)[pos];
   }
   
   byte getDuration(byte pos) {
@@ -107,6 +155,7 @@ class Program {
   }
   
   void setDuration(byte pos, byte duration) {
+    Serial.println(F("setDuration"));
     getStep(pos).duration = duration;
   }
   
@@ -115,6 +164,7 @@ class Program {
   }
   
   void setTemperature(byte pos, byte temperature) {
+    Serial.println(F("setTemperature"));
     getStep(pos).temperature = temperature;
   }
   
@@ -123,6 +173,7 @@ class Program {
   }
   
   void setMethod(byte pos, byte method) {
+    Serial.println(F("setMethod"));
     getStep(pos).constant = !!method;
   }
   

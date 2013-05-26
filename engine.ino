@@ -2,6 +2,7 @@ volatile byte temperature_target = 0;
 
 static void set_temperature_target(byte target) {
   temperature_target = target;
+  check_temperature();
 }
 
 static byte get_temperature_target() {

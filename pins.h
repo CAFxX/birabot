@@ -1,7 +1,7 @@
 // LCD pins
 // note: we use 4 bit mode, so we need only 4 data lines (D4-D7)
-#define PIN_LCD_RS 0
-#define PIN_LCD_ENABLE 1
+#define PIN_LCD_RS 7
+#define PIN_LCD_ENABLE 6
 #define PIN_LCD_D4 2
 #define PIN_LCD_D5 3
 #define PIN_LCD_D6 4
@@ -10,14 +10,14 @@
 // Keypad pins
 // note: the Keypad library will us pinMode INPUT_PULLUP on either row or col pins
 // this means the LED pin should not be used as a keypad pin!
-#define PIN_KEYPAD_COL0 6
-#define PIN_KEYPAD_COL1 7
-#define PIN_KEYPAD_COL2 8
-#define PIN_KEYPAD_COL3 9
-#define PIN_KEYPAD_ROW0 10
-#define PIN_KEYPAD_ROW1 11
-#define PIN_KEYPAD_ROW2 12
-#define PIN_KEYPAD_ROW3 13
+#define PIN_KEYPAD_COL0 10
+#define PIN_KEYPAD_COL1 11
+#define PIN_KEYPAD_COL2 12
+#define PIN_KEYPAD_COL3 13
+#define PIN_KEYPAD_ROW0 A0
+#define PIN_KEYPAD_ROW1 A1
+#define PIN_KEYPAD_ROW2 A2
+#define PIN_KEYPAD_ROW3 A3
 
 // Temperature sensor data pin (I2C)
 #define PIN_TEMP_SENS A0

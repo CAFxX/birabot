@@ -46,8 +46,11 @@
 #include <avr/eeprom.h>
 
 static byte eeprom_read(size_t pos) {
-  if (pos < 0 || pos > E2END)
+  if (pos < 0 || pos > E2END) {
+    Serial.println("eeprom read oob");
+    Serial.println(pos);
     return 0;
+  }
   return eeprom_read_byte((uint8_t*)pos);
 }
 
@@ -109,7 +112,7 @@ class microfsfile {
   public:
   // true if the file is on disk
   bool is_valid() {
-    return offset >= 0; // FIXME  
+    return offset != -1; // FIXME  
   }
   
   // return the size of the file
@@ -117,12 +120,22 @@ class microfsfile {
     return size;
   }
   
+  // return the id of the file
+  byte get_id() {
+    return id;
+  }
+  
+  // return the offset of the file
+  size_t get_offset() {
+    return offset;
+  }
+  
   // write byte <value> to position <pos> in the current file
   // if the file is not valid or if <pos> is out of bounds, return false
   bool write_byte(byte pos, byte value) {
     if (!is_valid())
       return false;
-    size_t off = offset + ((size_t)2) + ((size_t)pos);
+    size_t off = offset + 2 + pos;
     return eeprom_update(off, value);
   }
   
@@ -136,27 +149,45 @@ class microfsfile {
   }
   
   byte write_bytes(byte pos, byte* buf, byte len) {
-    if (!is_valid())
+    if (!is_valid()) {
+      Serial.println(F("!is_valid()"));
       return 0;
-    if (pos >= size)
-      return 0;
-    len = min(len, size-pos);
-    for (byte i=0; i<len; i++) {
-      write_byte(pos+i, buf[i]);
     }
-    return len;
+    if (pos >= size) {
+      Serial.println(F("pos >= size"));
+      Serial.println(pos);
+      Serial.println(size);
+      return 0;
+    }
+    byte i;
+    for (i=0; i<len && pos+i<size; i++) {
+      if (write_byte(pos+i, buf[i]) == false) {
+        Serial.println(F("write_byte fail"));
+        Serial.println(i);
+        Serial.println(pos);
+        Serial.println(size);
+        return 0;
+      }
+    }
+    return i;
   }
   
   byte read_bytes(byte pos, byte* buf, byte len) {
-    if (!is_valid())
+    if (!is_valid()) {
+      Serial.println(F("!is_valid()"));
       return 0;
-    if (pos >= size)
+    }
+    if (pos >= size) {
+      Serial.println(F("pos >= size"));
+      Serial.println(pos);
+      Serial.println(size);
       return 0;
-    len = min(len, size-pos);
-    for (byte i=0; i<len; i++) {
+    }
+    byte i;
+    for (i=0; i<len && pos+i<size; i++) {
       buf[i] = read_byte(pos+i);
     }
-    return len;
+    return i;
   }
   
 };
@@ -260,6 +291,21 @@ class microfs {
     return max_size;
   }  
   
+  
+  // number of free chunks
+  byte free_chunks() {
+    size_t pos = 0;
+    byte count = 0;
+    while (pos < size) {
+      microfsfile f = read_header(pos);
+      if (f.is_valid() && f.id == 0) {
+        count++;
+      }
+      pos += f.stride();
+    }
+    return count;
+  }    
+  
   // open an existing file with id <file_id>
   microfsfile open(byte file_id) {
     size_t pos = 0;
@@ -276,17 +322,24 @@ class microfs {
   // allocate and create a new file on disk of size <size>
   microfsfile create(byte size, byte file_id=0) {
     microfsfile unallocated = find_alloc(size);
-    if (!unallocated.is_valid())
+    if (!unallocated.is_valid()) {
+      Serial.println(F("!unallocated"));
+      Serial.println(size);
       return microfsfile();
+    }
     
     byte id;
     if (file_id == 0) {
       id = find_id();
-      if (id == 0)
+      if (id == 0) {
+        Serial.println(F("!find_id()"));
         return microfsfile();
+      }
     } else {
-      if (open(file_id).is_valid()) 
-        return microfsfile();
+      if (open(file_id).is_valid()) {
+        Serial.println(F("is_valid()!"));
+         microfsfile();
+      }
       id = file_id;
     }
     microfsfile newfile(id, size);
@@ -367,23 +420,44 @@ class microfs {
     // data != NULL                 -> overwrite
   }
   
+  void dump() {
+    for (int i=0; i<size; i++) {
+      char buf[3];
+      snprintf(buf, sizeof(buf), "%02x", eeprom_read(i));
+      Serial.print(buf);
+    }
+    Serial.println();
+  }
+  
   private:
 
   // find a random chunk of eeprom that can be used to store a file of length <size>
   // this means either a chunk of size = <size>+2 or a chunk of site >= <size>+2+2
-  microfsfile find_alloc(byte size) {
-    size_t pos = 0, candidates = 0;
+  microfsfile find_alloc(byte alloc_size) {
+    Serial.println(F("find_alloc"));
+    Serial.println(alloc_size);
+    size_t pos = 0;
     size_t start_pos = rand() % size;
-    // try to find an free chunk after a random start_pos (wrapping around, if needed)
+    start_pos = 0;
+    // try to find a free chunk after a random start_pos (wrapping around, if needed)
     while (pos < size) {
-      size_t cur_pos = (start_pos + pos) % size;
-      microfsfile f = read_header(cur_pos);
-      size_t size_plus_2 = ((size_t)size)+((size_t)2);
-      if (f.is_valid() && f.id == 0 && (f.size == size || f.size >= size_plus_2)) {
+      microfsfile f = read_header(pos);
+      size_t alloc_size_plus_2 = ((size_t)alloc_size)+((size_t)2);
+      if (pos >= start_pos && f.is_valid() && f.id == 0 && (f.size == alloc_size || f.size >= alloc_size_plus_2)) {
         return f;
       }
       pos += f.stride();
     }
+    pos = 0;
+    while (pos < start_pos) {
+      microfsfile f = read_header(pos);
+      size_t alloc_size_plus_2 = ((size_t)alloc_size)+((size_t)2);
+      if (pos >= start_pos && f.is_valid() && f.id == 0 && (f.size == alloc_size || f.size >= alloc_size_plus_2)) {
+        return f;
+      }
+      pos += f.stride();
+    }    
+    Serial.println(F("find_alloc fail"));
     return microfsfile();    
   }
   

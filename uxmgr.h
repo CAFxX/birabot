@@ -2,6 +2,13 @@
 #define UXMGR
 
 #include <stddef.h>
+#include <HardwareSerial.h>
+
+#define __string_PGM(data)                  \
+  char __buf__[sizeof(data)];               \
+  strcpy_P(__buf__, PSTR(data));             
+
+extern HardwareSerial Serial;
 
 class ux {
   friend class uxmgr;
@@ -35,8 +42,10 @@ class ux_input_numeric {
       return;
     }
     value = value * 10 + (key - '0');
-    while (value >= max) {
-      value -= delta;
+    if (value >= max) {
+      while (value >= delta) {
+        value -= delta;
+      }
     }
     if (value < min) {
       value = min;
@@ -50,6 +59,13 @@ class ux_input_numeric {
   }
 };
 
+
+static int freeRam() {
+  extern int __heap_start, *__brkval; 
+  int v; 
+  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
+}
+
 class uxmgr {
   
   static uxmgr singleton;
@@ -60,6 +76,21 @@ class uxmgr {
     curr = NULL;
   }
   
+  void dump(const char* prefix, bool in) {
+    Serial.print(in ? '>' : '<');
+    if (prefix != NULL) {
+      Serial.print(prefix);
+    }
+    Serial.print(freeRam());
+    Serial.print(',');
+    Serial.print((unsigned)curr);
+    if (curr != NULL) {
+      Serial.print(',');
+      Serial.print((unsigned)curr->prev);
+    }
+    Serial.println();
+  }
+  
   public:
   
   static uxmgr& get() {
@@ -68,10 +99,13 @@ class uxmgr {
   
   template <class T>
   void show(ux *prev = NULL) {
+    __string_PGM("show");
+    dump(__buf__, true);
     if (prev == NULL)
       delete curr;
     curr = new T();
     curr->prev = prev;
+    dump(__buf__, false);
     curr->on_show();
   }
   
@@ -86,21 +120,22 @@ class uxmgr {
     show<T>(NULL, param);
   }
 
-  void back() {
+  void back(int retVal=0, bool withRetVal=false) {
+    __string_PGM("back");
+    dump(__buf__, true);
     ux *prev = curr->prev;
-    if (prev == NULL)
-      return;
-    curr->prev = NULL;
-    delete curr;
-    curr = prev;
-    curr->on_show();
+    if (prev != NULL) {
+      curr->prev = NULL;
+      delete curr;
+      curr = prev;
+      if (withRetVal) {
+        curr->on_back(retVal);
+      }
+      curr->on_show();
+    }
+    dump(__buf__, false);
   }
   
-  void back(int retVal) {
-    back();
-    curr->on_back(retVal);
-  }
-
   void draw() {
     curr->draw();
   }
@@ -116,7 +151,7 @@ inline void ux::back() {
 }
 
 inline void ux::back(int retVal) { 
-  uxmgr::get().back(retVal);
+  uxmgr::get().back(retVal, true);
 }
 
 template <class T> void ux::show() {

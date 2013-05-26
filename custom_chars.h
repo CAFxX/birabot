@@ -134,3 +134,25 @@ PROGMEM byte sym_alarm_off[] = {
   B00000
 };
 
+PROGMEM byte type_constant[] = {
+  B00111,
+  B00100,
+  B00100,
+  B00100,
+  B00100,
+  B00100,
+  B00100,
+  B11100
+};
+
+PROGMEM byte type_linear[] = {
+  B00001,
+  B00010,
+  B00010,
+  B00100,
+  B00100,
+  B01000,
+  B01000,
+  B10000
+};
+
