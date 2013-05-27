@@ -19,6 +19,7 @@ volatile int safety_ignition_distance = 0;
 volatile byte safety_ignition_attempts = 0;
 volatile boolean watchdog_expire = false;
 volatile boolean flame_required = false;
+volatile boolean safety_flame_required = false;
 volatile boolean safety_alarm = false;
 
 static void safety_control() {
@@ -26,6 +27,10 @@ static void safety_control() {
   safety_gasvalve_on = false;
   // if a reset is pending everything must be off
   if (watchdog_expire == false) {
+    if (flame_required && !safety_flame_required) {
+      safety_control_ignition_override();
+    }
+    safety_flame_required = flame_required;
     // check if the flame needs to be on
     if (flame_required) {
       // check if we are in the ignition phase
@@ -47,7 +52,7 @@ static void safety_control() {
         safety_ignition_distance++;
         if (safety_ignition_distance >= safety_ignition_distance_threshold && safety_ignition_attempts < safety_ignition_attempts_threshold) {
           safety_ignition_attempts++;
-          safety_ignition_override = 0;
+          safety_control_ignition_override();
         } else if (safety_ignition_attempts >= safety_ignition_attempts_threshold) {
           handle_panic();
           safety_alarm = true;
@@ -55,6 +60,8 @@ static void safety_control() {
           // just wait...
         }
       }
+    } else {
+      handle_panic();
     }
     // set the ignition and gas valve output pins as decided above
     write_output_pins();
@@ -70,7 +77,7 @@ static void write_output_pins() {
 }
 
 static boolean safety_control_ignition_override() {
-  if (ignition_on())
+  if (ignition_on() || alarm_on())
     return false;
   safety_ignition_override = 0;
   return true;
@@ -96,14 +103,6 @@ static void reset() {
 }
 
 static void flame(boolean on) {
-  // if a reset was requested, do not allow controlling the flame
-  if (watchdog_expire) {
-    return;
-  }
-  if (on && !flame_required) {
-    // start ignition
-    safety_ignition_override = 0; 
-  }
   flame_required = on;
 }
 

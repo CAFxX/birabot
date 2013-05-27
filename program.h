@@ -194,7 +194,7 @@ class Program {
     }
     byte stepIndex = getStepAt(minute);
     if (getMethod(stepIndex) == 0) {
-      byte t1 = stepIndex == 0 ? 0 : getTemperature(stepIndex-1);
+      byte t1 = stepIndex == 0 ? 20 : getTemperature(stepIndex-1);
       int stepMinute = minute;
       for (int i = 0; i < stepIndex; i++) {
         stepMinute -= getDuration(i);

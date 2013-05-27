@@ -48,7 +48,7 @@ void setup() {
 
 void loop() {
   // poll the flame sensor
-  //poll_flame_sensor();
+  poll_flame_sensor();
   // fetch the temperature sensor
   //poll_temperature();
   // scan the keypad

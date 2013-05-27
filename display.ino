@@ -150,10 +150,10 @@ class program_list : public ux {
     if (prg->is_valid()) {
       printfAt_P(0, 0, "%03d Program  %03d", prg->id(), prg->duration());
     } else if (fs.open(prg->id()).is_valid()) {
-      if (prg->id() != 0) {
-        printfAt_P(0, 0, "%03d Unknown file", prg->id());
-      } else {
+      if (prg->id() == 0 || prg->id() == 1) {
         printfAt_P(0, 0, "%03d Reserved    ", prg->id());
+      } else {
+        printfAt_P(0, 0, "%03d Unknown file", prg->id());
       }
     } else {
       printfAt_P(0, 0, "%03d Free        ", prg->id());
@@ -284,13 +284,13 @@ class program_progress : public ux {
     }
   }
   void draw() {
-    time_t s = now() - start_t;
+    time_t second = (now() - start_t), minute = second / 60;
     if (now() - resume_t > 15) {
-      resume_save(prg->id(), s);
+      resume_save(prg->id(), second);
       resume_t = now();
     }
     
-    set_temperature_target(prg->getTemperatureAt(s/60));
+    set_temperature_target(prg->getTemperatureAt(minute));
 
     // first line
     printfAt_P(0, 0, "%02d\xdf\x7e%02d\xdf  ", 
@@ -304,8 +304,8 @@ class program_progress : public ux {
     writeAt(15, 0, flame_on() ? 5 : 4); 
     
     // second line
-    printfAt_P(0, 1, "%03d      %03d+%03d", 
-      prg->id(), s/60, prg->duration()-s/60);
+    printfAt_P(0, 1, "%03u      %03u+%03u", 
+      prg->id(), (unsigned)minute, (unsigned)(prg->duration()-minute));
   }
   
   void on_key(char key) {

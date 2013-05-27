@@ -34,7 +34,7 @@ static int resume_seconds() {
   }
   byte buf[2] = {0};
   if (resumefile.read_bytes(1, buf, sizeof(buf)) == sizeof(buf))
-    return *(size_t*)(buf+1);
+    return *(size_t*)buf;
   return 0; // FIXME
 }
 
@@ -42,11 +42,14 @@ static void resume_save(byte file_id, int seconds) {
   Serial.println(F("resume_save"));
   Serial.println(file_id);
   Serial.println(seconds);
-  fs.remove(1);
+  if (!fs.remove(1)) {
+    Serial.println(F("failed to delete resume file"));
+  }
   microfsfile resumefile = fs.create(3, 1);
   if (!resumefile.is_valid() || resumefile.get_size() != 3 || resumefile.get_id() != 1) {
     fs.remove(1);
-    Serial.println(F("failed to save resume file"));
+    Serial.println(F("failed to create resume file"));
+    return;
   }
   byte buf[3] = {0};
   buf[0] = file_id;
@@ -54,6 +57,7 @@ static void resume_save(byte file_id, int seconds) {
   if (resumefile.write_bytes(0, buf, sizeof(buf)) != sizeof(buf)) {
     fs.remove(1);
     Serial.println(F("failed to save resume file"));
+    return;
   }
 }
 
@@ -62,6 +66,7 @@ static void resume() {
   if (resume_file_id() != 0) {
     Serial.println(F("resume"));
     Serial.println(file_id);
+    Serial.println(resume_seconds());
     uxmgr::get().show<main_menu>();
     uxmgr::get().next<program_progress>(file_id);
   }
