@@ -22,7 +22,7 @@ class splash_screen;
 class microfs_tool;
 
 static void setup_display() {
-  lcd.begin(16, 2);
+  lcd.begin(20, 4);
   clear_display();
   uxmgr::get().show<splash_screen>();
 }
@@ -36,27 +36,13 @@ static void clear_display() {
 
 class splash_screen : public ux {
   void on_show() {
-    lcdCreateCharPGM(0, logo00, false);  
-    lcdCreateCharPGM(1, logo01, false);  
-    lcdCreateCharPGM(2, logo02, false);  
-    lcdCreateCharPGM(3, logo03, false);  
-    lcdCreateCharPGM(4, logo10, false);  
-    lcdCreateCharPGM(5, logo11, false);  
-    lcdCreateCharPGM(6, logo12, false);  
-    lcdCreateCharPGM(7, logo13, false);  
+    loadLogo();
   }
   void draw() {
-    printAt_P(5, 0, "BIRABOT");
-    printAt_P(5, 1, __DATE__);
+    printAt_P(7, 1, "BIRABOT");
+    printAt_P(7, 2, __DATE__);
     // draw the logo
-    writeAt(0, 0, 0);
-    writeAt(1, 0, 1);
-    writeAt(2, 0, 2);
-    writeAt(3, 0, 3);
-    writeAt(0, 1, 4);
-    writeAt(1, 1, 5);
-    writeAt(2, 1, 6);
-    writeAt(3, 1, 7);
+    drawLogo(2, 1);
   }
   void on_key(char) {
     show<main_menu>();
@@ -65,9 +51,11 @@ class splash_screen : public ux {
 
 class main_menu : public ux {
   void draw() {
-    printScreen_P(
-      "A-Manual   Run-B",
-      "C-Prog   Tools-D"
+    printScreen_P4(
+      "       BIRABOT      ",
+      "A-Manual Automatic-B",
+      "C-Recipes    Tools-D",
+      "                    "
     );
   }
   void on_key(char key) {
@@ -90,9 +78,9 @@ class main_menu : public ux {
 class program_abort : public ux {
   
   void draw() {
-    printScreen_P(
-      " Abort program? ",
-      "*-Cont   Abort-#"
+    printScreen_P2(
+      "   ABORT PROGRAM?   ",
+      "*-Continue   Abort-#"
     );
   }
   
@@ -140,25 +128,26 @@ class program_list : public ux {
   Program *prg;
   public:
   program_list() : prg(NULL), typing(false) {
-    load_program(1);
+    load_program(2);
   }
   ~program_list() {
     delete prg;
   }
   void draw() {
     char *desc;
+    printAt_P(0, 3, "    PROGRAM LIST    ");
     if (prg->is_valid()) {
-      printfAt_P(0, 0, "%03d Program  %03d", prg->id(), prg->duration());
+      printfAt_P(0, 1, "%03d Program      %03d", prg->id(), prg->duration());
     } else if (fs.open(prg->id()).is_valid()) {
       if (prg->id() == 0 || prg->id() == 1) {
-        printfAt_P(0, 0, "%03d Reserved    ", prg->id());
+        printfAt_P(0, 1, "%03d Reserved        ", prg->id());
       } else {
-        printfAt_P(0, 0, "%03d Unknown file", prg->id());
+        printfAt_P(0, 1, "%03d Unknown file    ", prg->id());
       }
     } else {
-      printfAt_P(0, 0, "%03d Free        ", prg->id());
+      printfAt_P(0, 1, "%03d Free            ", prg->id());
     }
-    printAt_P(0, 1, "*-Back  Select-#");
+    printAt_P(0, 3, "*-Back      Select-#");
   }
   void on_key(char key) {
     byte file_id = prg == NULL ? 1 : prg->id();
@@ -201,9 +190,11 @@ class program_menu : public ux {
     last_key = 0;
   }
   void draw() {
-    printScreen_P(
-      "A-Create  Edit-B",
-      "C-Copy  Delete-D"
+    printScreen_P4(
+      "   RECIPE EDITOR    ",
+      "A-Create      Edit-B",
+      "C-Copy      Delete-D",
+      "*-Back              "
     );
   }
   void on_key(char key) {
@@ -248,10 +239,12 @@ class program_menu : public ux {
 };
 
 /* 
-   +----------------+
-   |00°>00°  a i g f|
-   |pppppppp 000+000|
-   +----------------+ 
+   +--------------------+
+   |    RECIPE MODE     |
+   |00°>00°      a i g f|
+   |000          000+000|
+   |*-Abort             |
+   +--------------------+ 
    Progress screen shown during program execution
 */
 class program_progress : public ux {
@@ -266,14 +259,7 @@ class program_progress : public ux {
     delete prg;
   }
   void on_show() {
-    lcdCreateCharPGM(0, sym_ignition_off, false);  
-    lcdCreateCharPGM(1, sym_ignition_off, true);  
-    lcdCreateCharPGM(2, sym_gasvalve_off, false);  
-    lcdCreateCharPGM(3, sym_gasvalve_off, true);  
-    lcdCreateCharPGM(4, sym_flame_off, false);  
-    lcdCreateCharPGM(5, sym_flame_off, true);  
-    lcdCreateCharPGM(6, sym_alarm_off, false);  
-    lcdCreateCharPGM(7, sym_alarm_off, true);  
+    loadSymbols();
   }
   void on_init(int param) {
     prg = new Program(param);
@@ -292,20 +278,22 @@ class program_progress : public ux {
     
     set_temperature_target(prg->getTemperatureAt(minute));
 
-    // first line
-    printfAt_P(0, 0, "%02d\xdf\x7e%02d\xdf  ", 
+    printAt_P(0, 0, "    RECIPE MODE     ");
+
+    printfAt_P(0, 1, "%02d\xdf\x7e%02d\xdf      ", 
       get_temperature(), get_temperature_target());
-    writeAt( 9, 0, alarm_on() ? 7 : 6);
-    writeAt(10, 0, ' '); 
-    writeAt(11, 0, ignition_on() ? 1 : 0);
-    writeAt(12, 0, ' '); 
-    writeAt(13, 0, gasvalve_on() ? 3 : 2); 
-    writeAt(14, 0, ' '); 
-    writeAt(15, 0, flame_on() ? 5 : 4); 
+    writeAt(13, 1, alarm_on() ? 7 : 6);
+    writeAt(14, 1, ' '); 
+    writeAt(15, 1, ignition_on() ? 1 : 0);
+    writeAt(16, 1, ' '); 
+    writeAt(17, 1, gasvalve_on() ? 3 : 2); 
+    writeAt(18, 1, ' '); 
+    writeAt(19, 1, flame_on() ? 5 : 4); 
     
-    // second line
-    printfAt_P(0, 1, "%03u      %03u+%03u", 
+    printfAt_P(0, 2, "%03u          %03u+%03u", 
       prg->id(), (unsigned)minute, (unsigned)(prg->duration()-minute));
+    
+    printAt_P(0, 3, "*-Abort             ");
   }
   
   void on_key(char key) {
@@ -319,10 +307,12 @@ class program_progress : public ux {
 };
 
 /* 
-   +----------------+
-   |00°>00°  a i g f|
-   |*-Stop  Temp-0-9|
-   +----------------+ 
+   +--------------------+
+   |    MANUAL MODE     |
+   |00°>00°      a i g f|
+   |0-9-Temperature     |
+   |*-Stop              |
+   +--------------------+ 
    Manual control screen
 */
 class manual_control : public ux {
@@ -340,32 +330,27 @@ class manual_control : public ux {
   }
 
   void on_show() {
-    lcdCreateCharPGM(0, sym_ignition_off, false);  
-    lcdCreateCharPGM(1, sym_ignition_off, true);  
-    lcdCreateCharPGM(2, sym_gasvalve_off, false);  
-    lcdCreateCharPGM(3, sym_gasvalve_off, true);  
-    lcdCreateCharPGM(4, sym_flame_off, false);  
-    lcdCreateCharPGM(5, sym_flame_off, true);  
-    lcdCreateCharPGM(6, sym_alarm_off, false);  
-    lcdCreateCharPGM(7, sym_alarm_off, true);  
+    loadSymbols();
   }
   
   void draw() {
-    // first line
-    printfAt_P(0, 0, "%02d\xdf\x7e%02d\xdf  ", 
+    printAt_P(0, 0, "    MANUAL MODE     ");
+
+    printfAt_P(0, 1, "%02d\xdf\x7e%02d\xdf      ", 
       get_temperature(), temp_set());
-    writeAt( 9, 0, alarm_on() ? 7 : 6);
-    writeAt(10, 0, ' '); 
-    writeAt(11, 0, ignition_on() ? 1 : 0);
-    writeAt(12, 0, ' '); 
-    writeAt(13, 0, gasvalve_on() ? 3 : 2); 
-    writeAt(14, 0, ' '); 
-    writeAt(15, 0, flame_on() ? 5 : 4); 
+    writeAt(13, 1, alarm_on() ? 7 : 6);
+    writeAt(14, 1, ' '); 
+    writeAt(15, 1, ignition_on() ? 1 : 0);
+    writeAt(16, 1, ' '); 
+    writeAt(17, 1, gasvalve_on() ? 3 : 2); 
+    writeAt(18, 1, ' '); 
+    writeAt(19, 1, flame_on() ? 5 : 4); 
     
+    printAt_P(0, 2, "0-9-Temperature     ");
     if (temp_valid) {
-      printAt_P(0, 1, "*-Stop  Temp-0-9");
+      printAt_P(0, 3, "*-Stop              ");
     } else {
-      printAt_P(0, 1, "*-Cancel   Set-#");
+      printAt_P(0, 3, "*-Cancel       Set-#");
       lcd.setCursor(0, 5);
       lcd.cursor();
     }
@@ -445,16 +430,18 @@ class program_setup : public ux {
     reload();
   }
   void draw() {
-    // first line
-    printfAt_P(0, 0, "%03d          %03d", 
+    printAt_P(0, 0, "    PROGRAM EDITOR    ");
+    
+    printfAt_P(0, 1, "%03d              %03d", 
       prg->id(), prg->duration());
     
-    // second line
-    printfAt_P(0, 1, "%02d/%02d  %c%c%c%03d%c%02d", 
+    printfAt_P(0, 2, "%02d/%02d      %c%c%c%03d%c%02d", 
       row, rows, 
       field == 0 ? '\x7e' : ' ', type_mode() ? '\x01' : '\x02', 
       field == 1 ? '\x7e' : ' ', type_duration(), 
       field == 2 ? '\x7e' : ' ', type_temp());
+
+    printAt_P(0, 3, "*-Back ^ADv \x7f" "BC\x7e Ins-#");
   }
   void on_key(char key) {
     switch (key) {
@@ -524,10 +511,10 @@ class program_setup : public ux {
 
 class program_save : public ux {
   void draw() {
-    printScreen_P(
-      "  Save changes? ",
-      "*-Discard Save-#"
-    );    
+    printScreen_P2(
+      "    SAVE CHANGES?   ",
+      "*-Discard     Save-#"
+    );
   }
   void on_key(char key) {
     switch (key) {
@@ -546,9 +533,9 @@ class program_save : public ux {
 */
 class reset_confirm : public ux {
   void draw() {
-    printScreen_P(
-      "DELETE ALL DATA?",
-      "*-Abort Delete-#"
+    printScreen_P2(
+      "  DELETE ALL DATA?  ",
+      "*-Abort     Delete-#"
     );
   }
   void on_key(char key) {
@@ -584,26 +571,23 @@ class microfs_tool : public ux {
     free_chunks = fs.free_chunks();
   }
   void draw() {
+    printAt_P(0, 0, "       TOOLS        ");
+    clearLine(1);
+    clearLine(2);
     switch (row) {          
-      case 0: 
-        if (check) {
-          printAt_P(0, 0, "Check         OK"); 
-        } else {
-          printAt_P(0, 0, "Check      ERROR"); 
-        }        
-        break;
-      case 1: printfAt_P(0, 0, "Used      %6d",    used); break;
-      case 2: printfAt_P(0, 0, "Free      %6d",    free); break;
-      case 3: printfAt_P(0, 0, "Total     %6d",    total); break;
-      case 4: printfAt_P(0, 0, "Files        %3d", files); break;
-      case 5: printfAt_P(0, 0, "Max filesize %3d", max_free_chunk); break;
-      case 6: printfAt_P(0, 0, "Free chunks  %3d", free_chunks); break;
-      case 7: printAt_P(0, 0,  "Dump            "); break;
+      case 0: printAt_P(0, 1, "Filesystem status");  if (check) { printAt_P(17, 2, "OK") } else { printAt_P(14, 2, "ERROR"); } break;
+      case 1: printAt_P(0, 1, "Used space");         printfAt_P(13, 2, "%6d", used); break;
+      case 2: printAt_P(0, 1, "Free space");         printfAt_P(13, 2, "%6d", free); break;
+      case 3: printAt_P(0, 1, "Total space");        printfAt_P(13, 2, "%6d", total); break;
+      case 4: printAt_P(0, 1, "Files");              printfAt_P(13, 2, "%6d", files); break;
+      case 5: printAt_P(0, 1, "Largest free chunk"); printfAt_P(13, 2, "%6d", max_free_chunk); break;
+      case 6: printAt_P(0, 1, "Free chunks");        printfAt_P(13, 2, "%6d", free_chunks); break;
+      case 7: printAt_P(0, 1, "Export contents"); break;
     }
     switch (row) {
-      default: printAt_P(0, 1, "*-Back          "); break;
-      case 0:  printAt_P(0, 1, "*-Back  Format-#"); break;
-      case 7:  printAt_P(0, 1, "*-Back    Dump-#"); break;
+      default: printAt_P(0, 3, "*-Back              "); break;
+      case 0:  printAt_P(0, 3, "*-Back      Format-#"); break;
+      case 7:  printAt_P(0, 3, "*-Back        Dump-#"); break;
     }
   }
   void on_key(char key) {

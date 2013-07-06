@@ -17,7 +17,7 @@ static void setup_pins() {
   // flame sensor (thermocouple) pin (analog)
   //pinMode(PIN_FLAME_SENS, INPUT);
   // ignition control pin
-  //pinMode(PIN_IGNITION, OUTPUT);
+  pinMode(PIN_IGNITION, OUTPUT);
   // gas valve control pin
   pinMode(PIN_GASVALVE, OUTPUT);
   // unconnected pin, used as entropy source (analog)
