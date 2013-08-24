@@ -2,7 +2,7 @@
 #include <avr/wdt.h>
 
 // flame_level must be greater than flame_level_threshold to be considered OK
-byte flame_level_threshold = 255;
+byte flame_level_threshold = 1;
 // the ignition phase must end before this threshold (multiplied by safety_control_interval)
 byte safety_ignition_override_threshold = 60; // 60*50ms = 3s
 // safety_control will be run each safety_control_interval ms
@@ -124,6 +124,10 @@ static boolean alarm_on() {
 
 static void set_flame_level(byte level) {
   flame_level = level;
+}
+
+static byte get_flame_level() {
+  return flame_level;
 }
 
 static void setup_safety() {

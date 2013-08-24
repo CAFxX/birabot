@@ -4,7 +4,7 @@
 extern LiquidCrystal lcd;
 
 #define __string_PGM(data)                  \
-  char __buf__[sizeof(data)];               \
+  char __buf__[sizeof(data)+1];               \
   strcpy_P(__buf__, PSTR(data));             
 
 #define __blob_PGM(blobname, size)          \
@@ -46,11 +46,11 @@ static void writeAt(byte x, byte y, byte data) {
 }
 
 static void printfAt(byte x, byte y, char *fmt, ...) {          
-  const int max_len = 20+1;                   
-  char buf[max_len];        
+  const int max_len = 20;                   
+  char buf[max_len+1];        
   va_list args;
   va_start(args, fmt);  
-  vsnprintf(buf, max_len, fmt, args); 
+  vsnprintf(buf, max_len+1, fmt, args); 
   va_end(args);
   printAt(x, y, buf);                       
 }
@@ -61,12 +61,16 @@ static void printfAt(byte x, byte y, char *fmt, ...) {
 }
 
 #define printLineAt_P(x, y, data) {    \
-  const int max_len = 20+1;            \    
-  char buf[max_len];                   \
-  __string_PGM(data);                  \
-  memset(buf, ' ', max_len);           \
-  strncpy(buf+x, __buf__, max_len-x);  \
-  printAt(0, y, buf);                  \
+  __printLineAt_P(x, y, PSTR(data), sizeof(data)-1);      \
+}
+
+static void __printLineAt_P(int x, int y, char *data, int strlen_data) {
+  const int max_len = 20;                
+  char buf[max_len+1];
+  memset(buf, ' ', max_len);
+  memcpy_P(buf+x, data, min(strlen_data, max_len-x)); 
+  buf[max_len] = '\0';
+  printAt(0, y, buf);                  
 }
   
 static void __lcdCreateCharPGM(byte id, byte *data, boolean invert) {

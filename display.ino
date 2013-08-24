@@ -135,7 +135,7 @@ class program_list : public ux {
   }
   void draw() {
     char *desc;
-    printAt_P(0, 3, "    PROGRAM LIST    ");
+    printAt_P(0, 0, "    PROGRAM LIST    ");
     if (prg->is_valid()) {
       printfAt_P(0, 1, "%03d Program      %03d", prg->id(), prg->duration());
     } else if (fs.open(prg->id()).is_valid()) {
@@ -147,6 +147,7 @@ class program_list : public ux {
     } else {
       printfAt_P(0, 1, "%03d Free            ", prg->id());
     }
+    clearLine(2);
     printAt_P(0, 3, "*-Back      Select-#");
   }
   void on_key(char key) {
@@ -351,8 +352,6 @@ class manual_control : public ux {
       printAt_P(0, 3, "*-Stop              ");
     } else {
       printAt_P(0, 3, "*-Cancel       Set-#");
-      lcd.setCursor(0, 5);
-      lcd.cursor();
     }
   }
   
@@ -430,7 +429,7 @@ class program_setup : public ux {
     reload();
   }
   void draw() {
-    printAt_P(0, 0, "    PROGRAM EDITOR    ");
+    printAt_P(0, 0, "   PROGRAM EDITOR   ");
     
     printfAt_P(0, 1, "%03d              %03d", 
       prg->id(), prg->duration());
@@ -551,7 +550,7 @@ class reset_confirm : public ux {
 };
 
 class microfs_tool : public ux {
-  wrapping<int, 8> row;
+  wrapping<int, 9> row;
   boolean check;
   size_t used;
   size_t free;
@@ -571,21 +570,20 @@ class microfs_tool : public ux {
     free_chunks = fs.free_chunks();
   }
   void draw() {
-    printAt_P(0, 0, "       TOOLS        ");
-    clearLine(1);
-    clearLine(2);
+    printLineAt_P(7, 0, "TOOLS");
     switch (row) {          
-      case 0: printAt_P(0, 1, "Filesystem status");  if (check) { printAt_P(17, 2, "OK") } else { printAt_P(14, 2, "ERROR"); } break;
-      case 1: printAt_P(0, 1, "Used space");         printfAt_P(13, 2, "%6d", used); break;
-      case 2: printAt_P(0, 1, "Free space");         printfAt_P(13, 2, "%6d", free); break;
-      case 3: printAt_P(0, 1, "Total space");        printfAt_P(13, 2, "%6d", total); break;
-      case 4: printAt_P(0, 1, "Files");              printfAt_P(13, 2, "%6d", files); break;
-      case 5: printAt_P(0, 1, "Largest free chunk"); printfAt_P(13, 2, "%6d", max_free_chunk); break;
-      case 6: printAt_P(0, 1, "Free chunks");        printfAt_P(13, 2, "%6d", free_chunks); break;
-      case 7: printAt_P(0, 1, "Export contents"); break;
+      case 0: printLineAt_P(0, 1, "Filesystem status");    if (check) { printLineAt_P(18, 2, "OK") } else { printLineAt_P(15, 2, "ERROR"); } break;
+      case 1: printLineAt_P(0, 1, "Used space");           printfAt_P(0, 2, "%20d", used); break;
+      case 2: printLineAt_P(0, 1, "Free space");           printfAt_P(0, 2, "%20d", free); break;
+      case 3: printLineAt_P(0, 1, "Total space");          printfAt_P(0, 2, "%20d", total); break;
+      case 4: printLineAt_P(0, 1, "Files");                printfAt_P(0, 2, "%20d", files); break;
+      case 5: printLineAt_P(0, 1, "Largest free chunk");   printfAt_P(0, 2, "%20d", max_free_chunk); break;
+      case 6: printLineAt_P(0, 1, "Free chunks");          printfAt_P(0, 2, "%20d", free_chunks); break;
+      case 7: printLineAt_P(0, 1, "Export contents");      clearLine(2); break;
+      case 8: printLineAt_P(0, 1, "Flame sensor readout"); printfAt_P(0, 2, "%20u", get_flame_level()); break;
     }
     switch (row) {
-      default: printAt_P(0, 3, "*-Back              "); break;
+      default: printLineAt_P(0, 3, "*-Back"); break;
       case 0:  printAt_P(0, 3, "*-Back      Format-#"); break;
       case 7:  printAt_P(0, 3, "*-Back        Dump-#"); break;
     }

@@ -15,7 +15,7 @@ static void setup_pins() {
   // temperature sensor pin (digital)
   //pinMode(PIN_TEMP_SENS, INPUT);
   // flame sensor (thermocouple) pin (analog)
-  //pinMode(PIN_FLAME_SENS, INPUT);
+  pinMode(PIN_FLAME_SENS, INPUT);
   // ignition control pin
   pinMode(PIN_IGNITION, OUTPUT);
   // gas valve control pin
