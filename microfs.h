@@ -47,7 +47,7 @@
 
 static byte eeprom_read(size_t pos) {
   if (pos < 0 || pos > E2END) {
-    Serial.println("eeprom read oob");
+    Serial.println(F("eeprom read oob"));
     Serial.println(pos);
     return 0;
   }
